@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerBanner } from "@/components/profile/player-banner";
-import { joinLobby, leaveLobby, fillLobbyWithTestBots } from "@/lib/lobby/service";
+import { joinLobby, leaveLobby, fillLobbyWithTestBots, deleteLobby } from "@/lib/lobby/service";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyTileProps {
@@ -55,6 +55,20 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
     }
   };
 
+  const handleDeleteLobby = async () => {
+    if (!confirm("Na pewno usunąć to lobby? Tej operacji nie można cofnąć.")) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await deleteLobby(lobby.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd usuwania lobby");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -80,7 +94,7 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
               Zapisz się
             </Button>
           )}
-          {(isJoined || isAdmin) && (
+          {isJoined && (
             <Button size="sm" variant="secondary" asChild>
               <a href={`/lobby/${lobby.id}`}>Wejdź</a>
             </Button>
@@ -88,6 +102,16 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
           {lobby.status === "open" && isJoined && (
             <Button size="sm" variant="outline" onClick={handleLeave} disabled={loading}>
               Wypisz się
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleDeleteLobby}
+              disabled={loading}
+            >
+              Usuń lobby
             </Button>
           )}
           <Button

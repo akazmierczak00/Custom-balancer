@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { ConfirmPopup } from "@/components/lobby/confirm-popup";
@@ -17,6 +18,7 @@ import {
   confirmWeaknesses,
   draftTeams,
   fillLobbyWithTestBots,
+  deleteLobby,
   resolveLineupVote,
   resolveProposalVote,
   restartAfterCooldown,
@@ -35,6 +37,7 @@ interface LobbyRoomProps {
 }
 
 export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
+  const router = useRouter();
   const isAdmin = profile.role === "admin";
   const remaining = usePhaseTimer(lobby.phaseTimerEndsAt);
   const transitionLock = useRef(false);
@@ -149,6 +152,18 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     }
   };
 
+  const handleDeleteLobby = async () => {
+    if (!confirm("Na pewno usunąć to lobby? Tej operacji nie można cofnąć.")) {
+      return;
+    }
+    try {
+      await deleteLobby(lobby.id);
+      router.push("/dashboard");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd usuwania lobby");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-4">
       <div className="flex items-center justify-between">
@@ -165,6 +180,11 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
               Wypełnij botami (test)
             </Button>
           )}
+          {isAdmin && (
+            <Button variant="destructive" size="sm" onClick={handleDeleteLobby}>
+              Usuń lobby
+            </Button>
+          )}
           {remaining > 0 && (
             <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
           )}
@@ -174,6 +194,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       <ConfirmPopup
         lobby={lobby}
         currentUid={profile.uid}
+        isAdmin={isAdmin}
         open={lobby.status === "confirming"}
       />
 
@@ -181,6 +202,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         <LobbyParticipants
           lobby={lobby}
           currentUid={profile.uid}
+          isAdmin={isAdmin}
           showConfirmActions={lobby.status === "confirming"}
         />
       )}

@@ -35,9 +35,8 @@ export default function LobbyPage() {
   }
 
   const isParticipant = lobby.slots.includes(profile.uid);
-  const isAdmin = profile.role === "admin";
 
-  if (!isParticipant && !isAdmin) {
+  if (!isParticipant) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <p>Nie jesteś uczestnikiem tego lobby.</p>

@@ -4,22 +4,26 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlayerBanner } from "@/components/profile/player-banner";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
-import { acceptLobby } from "@/lib/lobby/service";
+import { acceptLobby, acceptLobbyTestBots } from "@/lib/lobby/service";
+import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyParticipantsProps {
   lobby: Lobby;
   currentUid: string;
+  isAdmin?: boolean;
   showConfirmActions?: boolean;
 }
 
 export function LobbyParticipants({
   lobby,
   currentUid,
+  isAdmin = false,
   showConfirmActions = false,
 }: LobbyParticipantsProps) {
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
+  const [loading, setLoading] = useState(false);
   const slotUids = useMemo(
     () => lobby.slots.filter(Boolean) as string[],
     [lobby.slots]
@@ -33,12 +37,29 @@ export function LobbyParticipants({
   const acceptedCount = Object.values(lobby.acceptances).filter(Boolean).length;
   const isJoined = lobby.slots.includes(currentUid);
   const hasAccepted = lobby.acceptances[currentUid];
+  const pendingBots = lobby.slots.filter(
+    (uid) => uid && isTestBotUid(uid) && !lobby.acceptances[uid]
+  ).length;
 
   const handleAccept = async () => {
+    setLoading(true);
     try {
       await acceptLobby(lobby.id, currentUid);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd akceptacji");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAcceptBots = async () => {
+    setLoading(true);
+    try {
+      await acceptLobbyTestBots(lobby.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd potwierdzania botów");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,17 +74,25 @@ export function LobbyParticipants({
           <p className="mt-2 text-slate-300">
             Zaakceptowano: {acceptedCount}/10
           </p>
-          {isJoined ? (
-            <Button
-              className="mt-4"
-              onClick={handleAccept}
-              disabled={hasAccepted}
-            >
-              {hasAccepted ? "Zaakceptowano" : "Akceptuj"}
-            </Button>
-          ) : (
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            {isJoined && (
+              <Button onClick={handleAccept} disabled={loading || hasAccepted}>
+                {hasAccepted ? "Zaakceptowano" : "Akceptuj (ja)"}
+              </Button>
+            )}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={handleAcceptBots}
+                disabled={loading || pendingBots === 0}
+              >
+                Potwierdź boty ({pendingBots})
+              </Button>
+            )}
+          </div>
+          {!isJoined && (
             <p className="mt-4 text-sm text-amber-300">
-              Zapisz się do lobby na dashboardzie, aby móc zaakceptować.
+              Zapisz się do lobby na dashboardzie, aby móc zaakceptować własny udział.
             </p>
           )}
         </div>

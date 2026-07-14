@@ -269,6 +269,43 @@ export async function acceptLobby(lobbyId: string, uid: string) {
   });
 }
 
+export async function acceptLobbyTestBots(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = snap.data() as Lobby;
+    if (lobby.status !== "confirming") {
+      throw new Error("Potwierdzanie botów dostępne tylko w fazie akceptacji");
+    }
+
+    const acceptances = { ...lobby.acceptances };
+    let confirmedBots = 0;
+
+    for (const uid of lobby.slots) {
+      if (uid && isTestBotUid(uid) && !acceptances[uid]) {
+        acceptances[uid] = true;
+        confirmedBots++;
+      }
+    }
+
+    if (confirmedBots === 0) {
+      throw new Error("Brak botów do potwierdzenia");
+    }
+
+    const allAccepted = lobby.slots.every(
+      (slotUid) => slotUid && acceptances[slotUid]
+    );
+
+    tx.update(lobbyRef, {
+      acceptances,
+      ...(allAccepted ? { status: "drafting" } : {}),
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
 async function fetchLobbyPlayers(uids: string[]): Promise<LobbyPlayer[]> {
   const players: LobbyPlayer[] = [];
   for (const uid of uids) {
@@ -761,6 +798,10 @@ export async function updateWeakness(id: string, data: WeaknessFormInput) {
 
 export async function deleteWeakness(id: string) {
   await deleteDoc(doc(getFirebaseDb(), "weaknesses", id));
+}
+
+export async function deleteLobby(lobbyId: string) {
+  await deleteDoc(doc(getFirebaseDb(), "lobbies", lobbyId));
 }
 
 export function getRemainingSeconds(endsAt: Timestamp | null): number {
