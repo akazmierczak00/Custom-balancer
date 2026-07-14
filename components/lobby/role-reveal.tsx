@@ -1,6 +1,7 @@
 "use client";
 
 import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
+import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { Lobby, TeamProposal } from "@/types";
 import { PlayerBanner } from "@/components/profile/player-banner";
 
@@ -13,8 +14,20 @@ interface RoleRevealProps {
 export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
   const roleIndex = lobby.revealRoleIndex;
   const currentRole = REVEAL_ROLE_ORDER[roleIndex];
+  const remaining = usePhaseTimer(lobby.phaseTimerEndsAt);
 
   if (!currentRole) return null;
+
+  const roleHeader = (
+    <div className="space-y-2 text-center">
+      {remaining > 0 && (
+        <p className="text-5xl font-bold text-indigo-400">{remaining}s</p>
+      )}
+      <h2 className="text-4xl font-bold text-indigo-300 md:text-5xl">
+        {getRoleLabel(currentRole)}
+      </h2>
+    </div>
+  );
 
   const getPlayerForRole = (team: TeamProposal["team1"], role: typeof currentRole) =>
     team.find((p) => p.role === role);
@@ -27,9 +40,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
 
     return (
       <div className="space-y-6 text-center">
-        <h2 className="text-4xl font-bold text-indigo-300">
-          {getRoleLabel(currentRole)}
-        </h2>
+        {roleHeader}
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-3 rounded-xl border border-indigo-500/30 p-4">
             <p className="font-semibold text-indigo-300">Propozycja A</p>
@@ -57,9 +68,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
 
   return (
     <div className="space-y-8 text-center">
-      <h2 className="text-5xl font-bold text-indigo-300">
-        {getRoleLabel(currentRole)}
-      </h2>
+      {roleHeader}
       <div className="grid items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
         <PlayerBanner player={p1} role={currentRole} />
         <span className="text-3xl font-bold text-slate-500">VS</span>

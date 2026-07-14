@@ -24,7 +24,12 @@ export function PlayerBanner({
 }: PlayerBannerProps) {
   if (!player) {
     return (
-      <div className={cn("rounded-lg border border-dashed border-slate-600 p-4", className)}>
+      <div
+        className={cn(
+          "flex h-full min-h-32 items-center justify-center rounded-lg border border-dashed border-slate-600 p-4",
+          className
+        )}
+      >
         <p className="text-sm text-slate-500">Pusty slot</p>
       </div>
     );
@@ -42,7 +47,7 @@ export function PlayerBanner({
   return (
     <div
       className={cn(
-        "relative rounded-lg border border-slate-700 bg-slate-800/80 p-4",
+        "relative flex h-full min-h-32 flex-col rounded-lg border border-slate-700 bg-slate-800/80 p-4",
         isSelector && "ring-2 ring-amber-400",
         className
       )}
@@ -72,7 +77,7 @@ export function PlayerBanner({
           {isSelector && <Sparkles className="h-4 w-4 text-amber-400" />}
         </div>
       </div>
-      <div className="mt-3 flex gap-1">
+      <div className="mt-auto flex gap-1 pt-3">
         {Array.from({ length: 10 }).map((_, i) => {
           const result = matchHistory[i];
           return (

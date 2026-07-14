@@ -40,8 +40,7 @@ export default function DashboardPage() {
     if (!profile) return;
     setCreating(true);
     try {
-      const id = await createLobby(profile.uid);
-      router.push(`/lobby/${id}`);
+      await createLobby(profile.uid);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd tworzenia lobby");
     } finally {

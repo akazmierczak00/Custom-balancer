@@ -11,8 +11,8 @@ interface TeamOverviewProps {
 
 export function TeamOverview({ lobby, votes }: TeamOverviewProps) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-center">
+    <div className="space-y-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-center gap-4 text-center">
         <h3 className="text-xl font-bold text-indigo-300">Team 1</h3>
         <span className="text-2xl font-bold text-slate-500">VS</span>
         <h3 className="text-xl font-bold text-purple-300">Team 2</h3>
@@ -24,20 +24,24 @@ export function TeamOverview({ lobby, votes }: TeamOverviewProps) {
         return (
           <div
             key={role}
-            className="grid grid-cols-[1fr_auto_1fr] items-center gap-4"
+            className="grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-stretch gap-4"
           >
             <PlayerBanner
               player={p1}
               role={role}
               voted={p1 ? !!votes?.[p1.uid] : false}
+              className="h-full"
             />
-            <span className="text-center font-semibold text-slate-300">
-              {getRoleLabel(role)}
-            </span>
+            <div className="flex items-center justify-center">
+              <span className="text-center text-sm font-semibold text-slate-300">
+                {getRoleLabel(role)}
+              </span>
+            </div>
             <PlayerBanner
               player={p2}
               role={role}
               voted={p2 ? !!votes?.[p2.uid] : false}
+              className="h-full"
             />
           </div>
         );
