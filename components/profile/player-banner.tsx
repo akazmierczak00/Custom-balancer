@@ -3,6 +3,7 @@
 import { ArrowLeftRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRolePriorities, getRoleLabel } from "@/lib/constants/roles";
+import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { getRankLabel } from "@/lib/constants/ranks";
 import { UserProfile, PlayerAssignment, LoLRole } from "@/types";
 
@@ -34,6 +35,9 @@ export function PlayerBanner({
   const matchHistory = "matchHistory" in player ? player.matchHistory : [];
   const rolePriorities =
     "rolePriorities" in player ? player.rolePriorities : undefined;
+  const isTestBot =
+    ("isTestBot" in player && player.isTestBot) ||
+    ("uid" in player && isTestBotUid(player.uid));
 
   return (
     <div
@@ -45,7 +49,14 @@ export function PlayerBanner({
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-semibold text-slate-100">{nick}</p>
+          <p className="font-semibold text-slate-100">
+            {nick}
+            {isTestBot && (
+              <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                BOT
+              </span>
+            )}
+          </p>
           <p className="text-xs text-slate-400">
             {rank ? getRankLabel(rank as never) : "Brak rangi"}
             {role ? ` · ${getRoleLabel(role)}` : ""}

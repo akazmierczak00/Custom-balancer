@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerBanner } from "@/components/profile/player-banner";
-import { joinLobby, leaveLobby } from "@/lib/lobby/service";
+import { joinLobby, leaveLobby, fillLobbyWithTestBots } from "@/lib/lobby/service";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyTileProps {
@@ -44,6 +44,17 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
     }
   };
 
+  const handleFillTestBots = async () => {
+    setLoading(true);
+    try {
+      await fillLobbyWithTestBots(lobby.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd wypełniania");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -53,7 +64,17 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
             Status: {lobby.status} · {filled}/10
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {lobby.status === "open" && isAdmin && filled < 10 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleFillTestBots}
+              disabled={loading}
+            >
+              Wypełnij botami (test)
+            </Button>
+          )}
           {lobby.status === "open" && !isJoined && (
             <Button size="sm" onClick={handleJoin} disabled={loading}>
               Zapisz się

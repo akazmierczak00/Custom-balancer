@@ -35,6 +35,7 @@ export interface UserProfile {
   matchHistory: MatchResult[];
   profileComplete: boolean;
   achievements: string[];
+  isTestBot?: boolean;
   riotPuuid?: string;
   createdAt: Timestamp;
 }

@@ -15,6 +15,7 @@ import {
   advanceReshuffleReveal,
   confirmWeaknesses,
   draftTeams,
+  fillLobbyWithTestBots,
   resetConfirmingLobby,
   resolveLineupVote,
   resolveProposalVote,
@@ -149,16 +150,36 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     }
   };
 
+  const filledSlots = lobby.slots.filter(Boolean).length;
+
+  const handleFillTestBots = async () => {
+    try {
+      await fillLobbyWithTestBots(lobby.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd wypełniania");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Lobby #{lobby.id.slice(0, 8)}</h1>
-          <p className="text-sm text-slate-400">Status: {lobby.status}</p>
+          <p className="text-sm text-slate-400">
+            Status: {lobby.status}
+            {lobby.status === "open" ? ` · ${filledSlots}/10` : ""}
+          </p>
         </div>
-        {remaining > 0 && (
-          <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
-        )}
+        <div className="flex items-center gap-3">
+          {lobby.status === "open" && isAdmin && filledSlots < 10 && (
+            <Button variant="outline" size="sm" onClick={handleFillTestBots}>
+              Wypełnij botami (test)
+            </Button>
+          )}
+          {remaining > 0 && (
+            <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
+          )}
+        </div>
       </div>
 
       <ConfirmPopup

@@ -7,6 +7,7 @@ import {
   getDocs,
   runTransaction,
   serverTimestamp,
+  setDoc,
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
@@ -21,6 +22,11 @@ import {
 } from "@/lib/weaknesses/helpers";
 import { drawWeaknessGrid } from "@/lib/algorithms/drawWeaknesses";
 import { compareRanks } from "@/lib/constants/ranks";
+import {
+  getAvailableTestBots,
+  isTestBotUid,
+  TEST_BOT_DEFINITIONS,
+} from "@/lib/lobby/test-bots";
 import {
   Lobby,
   LobbyPlayer,
@@ -106,6 +112,86 @@ export async function joinLobby(lobbyId: string, uid: string) {
 
     const updates: Record<string, unknown> = {
       slots,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (filled === LOBBY_SIZE) {
+      updates.status = "confirming";
+      updates.acceptDeadline = Timestamp.fromMillis(
+        Date.now() + CONFIRM_SECONDS * 1000
+      );
+      updates.phaseTimerEndsAt = Timestamp.fromMillis(
+        Date.now() + CONFIRM_SECONDS * 1000
+      );
+    }
+
+    tx.update(lobbyRef, updates);
+  });
+}
+
+export async function seedTestBotProfiles() {
+  for (const bot of TEST_BOT_DEFINITIONS) {
+    await setDoc(
+      doc(getFirebaseDb(), "users", bot.uid),
+      {
+        email: `${bot.uid}@test.local`,
+        role: "user",
+        nick: bot.nick,
+        rank: bot.rank,
+        rolePriorities: bot.rolePriorities,
+        wins: bot.wins,
+        losses: bot.losses,
+        matchHistory: bot.matchHistory,
+        profileComplete: true,
+        achievements: [],
+        isTestBot: true,
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+}
+
+export async function fillLobbyWithTestBots(lobbyId: string) {
+  await seedTestBotProfiles();
+
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = snap.data() as Lobby;
+    if (lobby.status !== "open") {
+      throw new Error("Można wypełnić botami tylko otwarte lobby");
+    }
+
+    const slots = [...lobby.slots];
+    const used = slots.filter(Boolean) as string[];
+    const available = getAvailableTestBots(used);
+
+    let botIndex = 0;
+    for (let i = 0; i < slots.length && botIndex < available.length; i++) {
+      if (slots[i] === null) {
+        slots[i] = available[botIndex].uid;
+        botIndex++;
+      }
+    }
+
+    if (botIndex === 0) {
+      throw new Error("Brak wolnych slotów lub dostępnych botów");
+    }
+
+    const acceptances = { ...lobby.acceptances };
+    for (const uid of slots) {
+      if (uid && isTestBotUid(uid)) {
+        acceptances[uid] = true;
+      }
+    }
+
+    const filled = slots.filter(Boolean).length;
+    const updates: Record<string, unknown> = {
+      slots,
+      acceptances,
       updatedAt: serverTimestamp(),
     };
 

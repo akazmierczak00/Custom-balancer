@@ -14,9 +14,16 @@ service cloud.firestore {
       return isSignedIn() && userDoc().data.role == 'admin';
     }
 
+    function isTestBot(userId) {
+      return userId.matches('test-bot-.*');
+    }
+
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && (
+        request.auth.uid == userId ||
+        (isAdmin() && isTestBot(userId))
+      );
       allow update: if isSignedIn() && (
         isAdmin() ||
         (
