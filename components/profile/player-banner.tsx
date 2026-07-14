@@ -12,6 +12,7 @@ interface PlayerBannerProps {
   role?: LoLRole;
   voted?: boolean;
   isSelector?: boolean;
+  mirrored?: boolean;
   className?: string;
 }
 
@@ -20,6 +21,7 @@ export function PlayerBanner({
   role,
   voted,
   isSelector,
+  mirrored = false,
   className,
 }: PlayerBannerProps) {
   if (!player) {
@@ -52,8 +54,13 @@ export function PlayerBanner({
         className
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
+      <div
+        className={cn(
+          "flex items-start justify-between gap-2",
+          mirrored && "flex-row-reverse"
+        )}
+      >
+        <div className={cn(mirrored && "text-right")}>
           <p className="font-semibold text-slate-100">
             {nick}
             {isTestBot && (
@@ -77,7 +84,12 @@ export function PlayerBanner({
           {isSelector && <Sparkles className="h-4 w-4 text-amber-400" />}
         </div>
       </div>
-      <div className="mt-auto flex gap-1 pt-3">
+      <div
+        className={cn(
+          "mt-auto flex gap-1 pt-3",
+          mirrored && "flex-row-reverse justify-end"
+        )}
+      >
         {Array.from({ length: 10 }).map((_, i) => {
           const result = matchHistory[i];
           return (

@@ -30,6 +30,7 @@ export function TeamOverview({ lobby, votes }: TeamOverviewProps) {
               player={p1}
               role={role}
               voted={p1 ? !!votes?.[p1.uid] : false}
+              mirrored
               className="h-full"
             />
             <div className="flex items-center justify-center">

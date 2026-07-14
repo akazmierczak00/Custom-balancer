@@ -45,7 +45,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
           <div className="space-y-3 rounded-xl border border-indigo-500/30 p-4">
             <p className="font-semibold text-indigo-300">Propozycja A</p>
             <div className="grid gap-3 md:grid-cols-2">
-              <PlayerBanner player={p1a} role={currentRole} />
+              <PlayerBanner player={p1a} role={currentRole} mirrored />
               <span className="self-center text-2xl font-bold text-slate-500">VS</span>
               <PlayerBanner player={p2a} role={currentRole} />
             </div>
@@ -53,7 +53,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
           <div className="space-y-3 rounded-xl border border-purple-500/30 p-4">
             <p className="font-semibold text-purple-300">Propozycja B</p>
             <div className="grid gap-3 md:grid-cols-2">
-              <PlayerBanner player={p1b} role={currentRole} />
+              <PlayerBanner player={p1b} role={currentRole} mirrored />
               <span className="self-center text-2xl font-bold text-slate-500">VS</span>
               <PlayerBanner player={p2b} role={currentRole} />
             </div>
@@ -70,7 +70,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
     <div className="space-y-8 text-center">
       {roleHeader}
       <div className="grid items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
-        <PlayerBanner player={p1} role={currentRole} />
+        <PlayerBanner player={p1} role={currentRole} mirrored />
         <span className="text-3xl font-bold text-slate-500">VS</span>
         <PlayerBanner player={p2} role={currentRole} />
       </div>
