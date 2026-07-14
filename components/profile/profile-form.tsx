@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { RANKS } from "@/lib/constants/ranks";
-import { ROLES } from "@/lib/constants/roles";
+import {
+  DEFAULT_ROLE_PRIORITIES,
+  normalizeRolePriorities,
+  ROLES,
+} from "@/lib/constants/roles";
 import { saveUserProfile } from "@/lib/lobby/service";
 import { LoLRole, RolePriorityGroup, UserProfile } from "@/types";
 
@@ -15,46 +20,70 @@ interface ProfileFormProps {
   onSaved?: () => void;
 }
 
+interface DragState {
+  role: LoLRole;
+  fromPriority: number;
+}
+
+function getInitialPriorities(profile: UserProfile): RolePriorityGroup[] {
+  if (profile.rolePriorities.length > 0) {
+    return normalizeRolePriorities(profile.rolePriorities);
+  }
+  return normalizeRolePriorities(DEFAULT_ROLE_PRIORITIES);
+}
+
 export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
   const [nick, setNick] = useState(profile.nick);
   const [rank, setRank] = useState(profile.rank);
-  const [priorities, setPriorities] = useState<RolePriorityGroup[]>(
-    profile.rolePriorities.length > 0
-      ? profile.rolePriorities
-      : [{ priority: 1, roles: ["mid"] }]
+  const [priorities, setPriorities] = useState<RolePriorityGroup[]>(() =>
+    getInitialPriorities(profile)
   );
+  const [dragging, setDragging] = useState<DragState | null>(null);
+  const [dropTarget, setDropTarget] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const assignedRoles = priorities.flatMap((group) => group.roles);
   const unassignedRoles = ROLES.map((r) => r.value).filter(
-    (role) => !priorities.some((g) => g.roles.includes(role))
+    (role) => !assignedRoles.includes(role)
   );
 
-  const addPriorityGroup = () => {
-    const nextPriority =
-      priorities.length > 0
-        ? Math.max(...priorities.map((p) => p.priority)) + 1
-        : 1;
-    setPriorities([...priorities, { priority: nextPriority, roles: [] }]);
+  const moveRole = (
+    role: LoLRole,
+    fromPriority: number,
+    toPriority: number
+  ) => {
+    if (fromPriority === toPriority) return;
+
+    setPriorities((current) =>
+      current.map((group) => {
+        let roles = [...group.roles];
+
+        if (group.priority === fromPriority) {
+          roles = roles.filter((entry) => entry !== role);
+        }
+        if (group.priority === toPriority && !roles.includes(role)) {
+          roles.push(role);
+        }
+
+        return { ...group, roles };
+      })
+    );
   };
 
-  const assignRole = (groupIndex: number, role: LoLRole) => {
-    const cleaned = priorities.map((g, i) =>
-      i === groupIndex
-        ? { ...g, roles: [...g.roles, role] }
-        : { ...g, roles: g.roles.filter((r) => r !== role) }
-    );
-    setPriorities(cleaned);
+  const handleDragStart = (role: LoLRole, fromPriority: number) => {
+    setDragging({ role, fromPriority });
   };
 
-  const removeFromGroup = (groupIndex: number, role: LoLRole) => {
-    setPriorities(
-      priorities.map((g, i) =>
-        i === groupIndex
-          ? { ...g, roles: g.roles.filter((r) => r !== role) }
-          : g
-      )
-    );
+  const handleDragEnd = () => {
+    setDragging(null);
+    setDropTarget(null);
+  };
+
+  const handleDrop = (toPriority: number) => {
+    if (!dragging) return;
+    moveRole(dragging.role, dragging.fromPriority, toPriority);
+    handleDragEnd();
   };
 
   const handleSave = async () => {
@@ -68,7 +97,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
       return;
     }
     if (unassignedRoles.length > 0) {
-      setError("Przypisz wszystkie role do priorytetów");
+      setError("Przypisz wszystkie role do kolumn priorytetów");
       return;
     }
 
@@ -77,7 +106,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
       await saveUserProfile(profile.uid, {
         nick: nick.trim(),
         rank,
-        rolePriorities: priorities.filter((p) => p.roles.length > 0),
+        rolePriorities: priorities.filter((group) => group.roles.length > 0),
         profileComplete: true,
       });
       onSaved?.();
@@ -122,50 +151,52 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Priorytety ról</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addPriorityGroup}>
-              Dodaj kolumnę priorytetu
-            </Button>
-          </div>
+          <Label>Priorytety ról</Label>
+          <p className="text-xs text-slate-400">
+            Przeciągaj kafelki ról między kolumnami. Priorytet 1 to najwyższy.
+          </p>
 
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            {priorities.map((group, groupIndex) => (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {priorities.map((group) => (
               <div
                 key={group.priority}
-                className="rounded-lg border border-slate-700 bg-slate-800/50 p-3"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDropTarget(group.priority);
+                }}
+                onDragLeave={() =>
+                  setDropTarget((current) =>
+                    current === group.priority ? null : current
+                  )
+                }
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDrop(group.priority);
+                }}
+                className={cn(
+                  "min-h-36 rounded-lg border border-slate-700 bg-slate-800/50 p-3 transition-colors",
+                  dropTarget === group.priority && "border-indigo-400 bg-indigo-950/30"
+                )}
               >
-                <p className="mb-2 text-xs font-semibold text-indigo-300">
+                <p className="mb-3 text-center text-xs font-semibold text-indigo-300">
                   Priorytet {group.priority}
                 </p>
-                <div className="mb-2 flex min-h-16 flex-wrap gap-1">
+                <div className="flex min-h-20 flex-col gap-2">
                   {group.roles.map((role) => (
-                    <button
+                    <div
                       key={role}
-                      type="button"
-                      onClick={() => removeFromGroup(groupIndex, role)}
-                      className="rounded bg-indigo-600/30 px-2 py-1 text-xs text-indigo-200"
+                      draggable
+                      onDragStart={() => handleDragStart(role, group.priority)}
+                      onDragEnd={handleDragEnd}
+                      className={cn(
+                        "cursor-grab rounded-md border border-indigo-500/40 bg-indigo-600/25 px-3 py-2 text-center text-sm font-medium text-indigo-100 active:cursor-grabbing",
+                        dragging?.role === role && "opacity-50"
+                      )}
                     >
-                      {ROLES.find((r) => r.value === role)?.label}
-                    </button>
+                      {ROLES.find((entry) => entry.value === role)?.label}
+                    </div>
                   ))}
                 </div>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      assignRole(groupIndex, e.target.value as LoLRole);
-                    }
-                  }}
-                  className="w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-200"
-                >
-                  <option value="">Dodaj rolę...</option>
-                  {[...unassignedRoles, ...group.roles].map((role) => (
-                    <option key={role} value={role}>
-                      {ROLES.find((r) => r.value === role)?.label}
-                    </option>
-                  ))}
-                </select>
               </div>
             ))}
           </div>
@@ -174,7 +205,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
             <p className="text-xs text-amber-400">
               Nieprzypisane role:{" "}
               {unassignedRoles
-                .map((r) => ROLES.find((x) => x.value === r)?.label)
+                .map((role) => ROLES.find((entry) => entry.value === role)?.label)
                 .join(", ")}
             </p>
           )}
