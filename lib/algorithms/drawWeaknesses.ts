@@ -1,7 +1,14 @@
 import { Weakness, WeaknessCell } from "@/types";
+import { getWeaknessTierText, weaknessHasTier } from "@/lib/weaknesses/helpers";
 
-function weightedPick(pool: Weakness[], exclude: Set<string>): Weakness | null {
-  const available = pool.filter((w) => !exclude.has(w.id));
+function weightedPick(
+  pool: Weakness[],
+  tier: 1 | 2 | 3,
+  exclude: Set<string>
+): Weakness | null {
+  const available = pool.filter(
+    (w) => !exclude.has(w.id) && weaknessHasTier(w, tier)
+  );
   if (available.length === 0) return null;
 
   const weights = available.map((w) => 101 - w.rarity);
@@ -23,7 +30,7 @@ export function drawWeaknessGrid(weaknesses: Weakness[]): WeaknessCell[][] {
   for (const tier of [1, 2, 3] as const) {
     const row: WeaknessCell[] = [];
     for (let col = 0; col < 3; col++) {
-      const picked = weightedPick(weaknesses, used);
+      const picked = weightedPick(weaknesses, tier, used);
       if (!picked) {
         row.push({
           weaknessId: `empty-${tier}-${col}`,
@@ -37,8 +44,7 @@ export function drawWeaknessGrid(weaknesses: Weakness[]): WeaknessCell[][] {
       }
 
       used.add(picked.id);
-      const text =
-        tier === 1 ? picked.tier1 : tier === 2 ? picked.tier2 : picked.tier3;
+      const text = getWeaknessTierText(picked, tier)!;
 
       row.push({
         weaknessId: picked.id,

@@ -15,6 +15,10 @@ import {
   buildFullProposal,
   generateDistinctProposals,
 } from "@/lib/algorithms/balanceTeams";
+import {
+  sanitizeWeaknessForm,
+  WeaknessFormInput,
+} from "@/lib/weaknesses/helpers";
 import { drawWeaknessGrid } from "@/lib/algorithms/drawWeaknesses";
 import { compareRanks } from "@/lib/constants/ranks";
 import {
@@ -655,21 +659,18 @@ export async function saveUserProfile(
   await updateDoc(doc(getFirebaseDb(), "users", uid), safe);
 }
 
-export async function createWeakness(
-  data: Omit<Weakness, "id" | "createdAt">
-) {
+export async function createWeakness(data: WeaknessFormInput) {
   await addDoc(collection(getFirebaseDb(), "weaknesses"), {
-    ...data,
+    ...sanitizeWeaknessForm(data, { isUpdate: false }),
     createdAt: serverTimestamp(),
   });
 }
 
-export async function updateWeakness(
-  id: string,
-  data: Partial<Weakness>
-) {
-  const { id: _id, createdAt, ...safe } = data;
-  await updateDoc(doc(getFirebaseDb(), "weaknesses", id), safe);
+export async function updateWeakness(id: string, data: WeaknessFormInput) {
+  await updateDoc(
+    doc(getFirebaseDb(), "weaknesses", id),
+    sanitizeWeaknessForm(data, { isUpdate: true })
+  );
 }
 
 export async function deleteWeakness(id: string) {

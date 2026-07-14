@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/components/providers/auth-provider";
 import { subscribeToWeaknesses } from "@/lib/firebase/firestore";
+import { validateWeaknessForm } from "@/lib/weaknesses/helpers";
 import {
   createWeakness,
   deleteWeakness,
@@ -16,19 +17,22 @@ import {
 } from "@/lib/lobby/service";
 import { Weakness } from "@/types";
 
+const EMPTY_FORM = {
+  name: "",
+  tier1: "",
+  tier2: "",
+  tier3: "",
+  rarity: 50,
+};
+
 export default function WeaknessesAdminPage() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
   const [weaknesses, setWeaknesses] = useState<Weakness[]>([]);
-  const [form, setForm] = useState({
-    name: "",
-    tier1: "",
-    tier2: "",
-    tier3: "",
-    rarity: 50,
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -38,13 +42,22 @@ export default function WeaknessesAdminPage() {
   useEffect(() => subscribeToWeaknesses(setWeaknesses), []);
 
   const resetForm = () => {
-    setForm({ name: "", tier1: "", tier2: "", tier3: "", rarity: 50 });
+    setForm(EMPTY_FORM);
     setEditingId(null);
+    setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+
+    const validationError = validateWeaknessForm(form);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError("");
     setSaving(true);
     try {
       if (editingId) {
@@ -54,7 +67,7 @@ export default function WeaknessesAdminPage() {
       }
       resetForm();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Błąd zapisu");
+      setError(err instanceof Error ? err.message : "Błąd zapisu");
     } finally {
       setSaving(false);
     }
@@ -64,11 +77,12 @@ export default function WeaknessesAdminPage() {
     setEditingId(w.id);
     setForm({
       name: w.name,
-      tier1: w.tier1,
-      tier2: w.tier2,
-      tier3: w.tier3,
+      tier1: w.tier1 ?? "",
+      tier2: w.tier2 ?? "",
+      tier3: w.tier3 ?? "",
       rarity: w.rarity,
     });
+    setError("");
   };
 
   if (loading || !profile) {
@@ -110,29 +124,35 @@ export default function WeaknessesAdminPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Tier 1 (najsłabsze)</Label>
+              <Label>Tier 1 (najsłabsze, opcjonalne)</Label>
               <Input
                 value={form.tier1}
                 onChange={(e) => setForm({ ...form, tier1: e.target.value })}
-                required
+                placeholder="Opcjonalnie"
               />
             </div>
             <div className="space-y-2">
-              <Label>Tier 2 (średnie)</Label>
+              <Label>Tier 2 (średnie, opcjonalne)</Label>
               <Input
                 value={form.tier2}
                 onChange={(e) => setForm({ ...form, tier2: e.target.value })}
-                required
+                placeholder="Opcjonalnie"
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Tier 3 (bardzo mocne)</Label>
+              <Label>Tier 3 (bardzo mocne, opcjonalne)</Label>
               <Input
                 value={form.tier3}
                 onChange={(e) => setForm({ ...form, tier3: e.target.value })}
-                required
+                placeholder="Opcjonalnie"
               />
             </div>
+            <p className="text-xs text-slate-400 md:col-span-2">
+              Wypełnij tylko tiery, które mają obowiązywać. Puste tiery nie trafią do bazy.
+            </p>
+            {error && (
+              <p className="text-sm text-red-400 md:col-span-2">{error}</p>
+            )}
             <div className="flex gap-2 md:col-span-2">
               <Button type="submit" disabled={saving}>
                 {editingId ? "Zapisz zmiany" : "Dodaj"}
@@ -156,9 +176,9 @@ export default function WeaknessesAdminPage() {
                   {w.name}{" "}
                   <span className="text-xs text-slate-400">(rzadkość: {w.rarity})</span>
                 </p>
-                <p className="text-sm text-slate-300">T1: {w.tier1}</p>
-                <p className="text-sm text-slate-300">T2: {w.tier2}</p>
-                <p className="text-sm text-slate-300">T3: {w.tier3}</p>
+                {w.tier1 && <p className="text-sm text-slate-300">T1: {w.tier1}</p>}
+                {w.tier2 && <p className="text-sm text-slate-300">T2: {w.tier2}</p>}
+                {w.tier3 && <p className="text-sm text-slate-300">T3: {w.tier3}</p>}
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => startEdit(w)}>

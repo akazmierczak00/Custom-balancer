@@ -42,9 +42,9 @@ export interface UserProfile {
 export interface Weakness {
   id: string;
   name: string;
-  tier1: string;
-  tier2: string;
-  tier3: string;
+  tier1?: string;
+  tier2?: string;
+  tier3?: string;
   rarity: number;
   createdBy: string;
   createdAt: Timestamp;
