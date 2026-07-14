@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,9 +20,14 @@ interface ConfirmPopupProps {
 export function ConfirmPopup({ lobby, currentUid, open }: ConfirmPopupProps) {
   const remaining = usePhaseTimer(lobby.phaseTimerEndsAt);
   const acceptedCount = Object.values(lobby.acceptances).filter(Boolean).length;
-  const hasAccepted = lobby.acceptances[currentUid];
+  const isJoined = lobby.slots.includes(currentUid);
+  const hasAccepted = !!lobby.acceptances[currentUid];
 
   const handleAccept = async () => {
+    if (!isJoined) {
+      alert("Musisz być zapisany do lobby, aby zaakceptować.");
+      return;
+    }
     try {
       await acceptLobby(lobby.id, currentUid);
     } catch (e) {
@@ -44,10 +48,14 @@ export function ConfirmPopup({ lobby, currentUid, open }: ConfirmPopupProps) {
           </p>
           <Button
             onClick={handleAccept}
-            disabled={hasAccepted}
+            disabled={!isJoined || hasAccepted}
             className="w-full"
           >
-            {hasAccepted ? "Zaakceptowano" : "Akceptuj"}
+            {!isJoined
+              ? "Zapisz się, aby akceptować"
+              : hasAccepted
+                ? "Zaakceptowano"
+                : "Akceptuj"}
           </Button>
         </div>
       </DialogContent>

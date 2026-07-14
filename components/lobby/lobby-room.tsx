@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { ConfirmPopup } from "@/components/lobby/confirm-popup";
+import { LobbyParticipants } from "@/components/lobby/lobby-participants";
 import { RoleReveal } from "@/components/lobby/role-reveal";
 import { TeamOverview } from "@/components/lobby/team-overview";
 import { LineupVotePanel } from "@/components/lobby/lineup-vote-panel";
@@ -16,7 +17,6 @@ import {
   confirmWeaknesses,
   draftTeams,
   fillLobbyWithTestBots,
-  resetConfirmingLobby,
   resolveLineupVote,
   resolveProposalVote,
   restartAfterCooldown,
@@ -56,17 +56,6 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       runTransition(() => draftTeams(lobby.id));
     }
   }, [lobby.status, lobby.id, runTransition]);
-
-  useEffect(() => {
-    if (lobby.status === "confirming" && remaining === 0) {
-      const allAccepted = lobby.slots.every(
-        (uid) => uid && lobby.acceptances[uid]
-      );
-      if (!allAccepted) {
-        runTransition(() => resetConfirmingLobby(lobby.id));
-      }
-    }
-  }, [lobby.status, remaining, lobby.slots, lobby.acceptances, lobby.id, runTransition]);
 
   useEffect(() => {
     if (lobby.status === "reveal" && remaining === 0 && lobby.revealRoleIndex < 5) {
@@ -187,6 +176,18 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         currentUid={profile.uid}
         open={lobby.status === "confirming"}
       />
+
+      {(lobby.status === "open" || lobby.status === "confirming" || lobby.status === "drafting") && (
+        <LobbyParticipants
+          lobby={lobby}
+          currentUid={profile.uid}
+          showConfirmActions={lobby.status === "confirming"}
+        />
+      )}
+
+      {lobby.status === "drafting" && (
+        <p className="text-center text-slate-400">Losowanie składów...</p>
+      )}
 
       {lobby.status === "reveal" && <RoleReveal lobby={lobby} />}
 

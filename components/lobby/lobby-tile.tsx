@@ -80,14 +80,14 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
               Zapisz się
             </Button>
           )}
+          {(isJoined || isAdmin) && (
+            <Button size="sm" variant="secondary" asChild>
+              <a href={`/lobby/${lobby.id}`}>Wejdź</a>
+            </Button>
+          )}
           {lobby.status === "open" && isJoined && (
             <Button size="sm" variant="outline" onClick={handleLeave} disabled={loading}>
               Wypisz się
-            </Button>
-          )}
-          {(isJoined || isAdmin) && lobby.status !== "open" && (
-            <Button size="sm" variant="secondary" asChild>
-              <a href={`/lobby/${lobby.id}`}>Wejdź</a>
             </Button>
           )}
           <Button
