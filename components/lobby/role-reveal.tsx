@@ -138,7 +138,7 @@ export function RoleReveal({
 
   if (dual && lobby.proposalA && lobby.proposalB) {
     return (
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-10 md:grid-cols-2 md:gap-16">
         <ProposalRevealColumn
             label="Propozycja A"
             labelClassName="text-indigo-300"

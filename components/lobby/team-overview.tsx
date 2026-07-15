@@ -1,23 +1,58 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
+import { subscribeToUsers } from "@/lib/firebase/firestore";
 import { cn } from "@/lib/utils";
-import { Lobby } from "@/types";
+import { Lobby, PlayerAssignment, UserProfile } from "@/types";
 import { PlayerBanner } from "@/components/profile/player-banner";
 
 interface TeamOverviewProps {
   lobby: Lobby;
+  team1?: PlayerAssignment[];
+  team2?: PlayerAssignment[];
   votes?: Record<string, string>;
   compact?: boolean;
   currentUid?: string;
 }
 
+function enrichPlayer(
+  player: PlayerAssignment | undefined,
+  liveUsers: Record<string, UserProfile>
+): PlayerAssignment | undefined {
+  if (!player) return undefined;
+  const live = liveUsers[player.uid];
+  if (!live) return player;
+  return {
+    ...player,
+    wins: live.wins,
+    losses: live.losses,
+    matchHistory: live.matchHistory,
+  };
+}
+
 export function TeamOverview({
   lobby,
+  team1: team1Override,
+  team2: team2Override,
   votes,
   compact = false,
   currentUid,
 }: TeamOverviewProps) {
+  const team1 = team1Override ?? lobby.team1;
+  const team2 = team2Override ?? lobby.team2;
+
+  const [liveUsers, setLiveUsers] = useState<Record<string, UserProfile>>({});
+
+  const playerUids = useMemo(
+    () => [...new Set([...team1, ...team2].map((player) => player.uid))],
+    [team1, team2]
+  );
+
+  useEffect(() => {
+    return subscribeToUsers(playerUids, setLiveUsers);
+  }, [playerUids]);
+
   return (
     <div className="min-w-0 space-y-3">
       <div
@@ -38,8 +73,14 @@ export function TeamOverview({
       </div>
 
       {REVEAL_ROLE_ORDER.map((role) => {
-        const p1 = lobby.team1.find((p) => p.role === role);
-        const p2 = lobby.team2.find((p) => p.role === role);
+        const p1 = enrichPlayer(
+          team1.find((player) => player.role === role),
+          liveUsers
+        );
+        const p2 = enrichPlayer(
+          team2.find((player) => player.role === role),
+          liveUsers
+        );
         return (
           <div
             key={role}

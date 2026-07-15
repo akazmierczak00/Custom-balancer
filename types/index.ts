@@ -67,7 +67,7 @@ export type LobbyStatus =
   | "final"
   | "playing"
   | "post_game"
-  | "cooldown"
+  | "session_summary"
   | "archived";
 
 export interface PlayerAssignment {
@@ -122,6 +122,17 @@ export interface LobbyWeaknesses {
   revealIndex: number;
 }
 
+export interface LobbyRoundRecord {
+  roundNumber: number;
+  team1: PlayerAssignment[];
+  team2: PlayerAssignment[];
+  winnerTeam: 1 | 2;
+  selectedWeaknesses: SelectedWeakness[];
+  screenshotUrl?: string;
+  youtubeUrl?: string;
+  completedAt: Timestamp;
+}
+
 export interface Lobby {
   id: string;
   createdBy: string;
@@ -138,6 +149,7 @@ export interface Lobby {
   reshuffleBonusGranted: boolean;
   weaknesses: LobbyWeaknesses;
   winnerTeam: 1 | 2 | null;
+  roundHistory: LobbyRoundRecord[];
   cooldownMinutes: number | null;
   cooldownEndsAt: Timestamp | null;
   phaseTimerEndsAt: Timestamp | null;

@@ -12,6 +12,7 @@ import { LineupVotePanel } from "@/components/lobby/lineup-vote-panel";
 import { ProposalVotePanel } from "@/components/lobby/proposal-vote-panel";
 import { WeaknessGrid } from "@/components/lobby/weakness-grid";
 import { PostGamePanel } from "@/components/lobby/post-game-panel";
+import { SessionSummaryPanel } from "@/components/lobby/session-summary-panel";
 import {
   advanceReveal,
   advanceReshuffleReveal,
@@ -21,7 +22,6 @@ import {
   fillLobbyWithTestBots,
   resolveLineupVote,
   resolveProposalVote,
-  restartAfterCooldown,
   restartConfirmTimer,
   revealNextWeakness,
   selectWeakness,
@@ -144,12 +144,6 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   ]);
 
   useEffect(() => {
-    if (lobby.status === "cooldown" && remaining === 0 && isAdmin) {
-      runTransition(() => restartAfterCooldown(lobby.id));
-    }
-  }, [lobby.status, remaining, isAdmin, lobby.id, runTransition]);
-
-  useEffect(() => {
     if (lobby.status !== "weakness_pick") {
       setAdminActingAsSelector(false);
     }
@@ -188,7 +182,6 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     lobby.status === "final" ||
     lobby.status === "playing" ||
     lobby.status === "post_game" ||
-    lobby.status === "cooldown" ||
     !!lobby.weaknesses?.confirmed;
 
   const showWeaknessSection =
@@ -396,12 +389,11 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         </div>
       )}
 
-      <PostGamePanel
-        lobby={lobby}
-        isAdmin={isAdmin}
-        remaining={remaining}
-        onCooldownEnd={() => restartAfterCooldown(lobby.id)}
-      />
+      {lobby.status === "session_summary" && (
+        <SessionSummaryPanel lobby={lobby} isAdmin={isAdmin} />
+      )}
+
+      <PostGamePanel lobby={lobby} isAdmin={isAdmin} />
     </div>
   );
 }

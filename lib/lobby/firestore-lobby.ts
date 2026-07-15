@@ -70,6 +70,11 @@ export function normalizeLobby(data: Lobby): Lobby {
   return {
     ...data,
     presentUids: data.presentUids ?? {},
+    roundHistory: (data.roundHistory ?? []).map((round) => ({
+      ...round,
+      team1: round.team1?.map(normalizePlayerAssignment) ?? [],
+      team2: round.team2?.map(normalizePlayerAssignment) ?? [],
+    })),
     team1: data.team1?.map(normalizePlayerAssignment) ?? [],
     team2: data.team2?.map(normalizePlayerAssignment) ?? [],
     proposalA: data.proposalA ? normalizeTeamProposal(data.proposalA) : null,

@@ -1,27 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { setWinner, startCooldown } from "@/lib/lobby/service";
+import {
+  endLobbySession,
+  setWinner,
+  startNextRound,
+  uploadRoundScreenshot,
+} from "@/lib/lobby/service";
 import { Lobby } from "@/types";
 
 interface PostGamePanelProps {
   lobby: Lobby;
   isAdmin: boolean;
-  remaining: number;
-  onCooldownEnd?: () => void;
 }
 
-export function PostGamePanel({
-  lobby,
-  isAdmin,
-  remaining,
-  onCooldownEnd,
-}: PostGamePanelProps) {
-  const [minutes, setMinutes] = useState(5);
+export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentRound = lobby.roundHistory?.[lobby.roundHistory.length - 1];
+  const roundNumber = currentRound?.roundNumber;
 
   const pickWinner = async (team: 1 | 2) => {
     setLoading(true);
@@ -34,10 +36,35 @@ export function PostGamePanel({
     }
   };
 
-  const startTimer = async () => {
+  const handleScreenshot = async (file: File) => {
+    if (!roundNumber) return;
+    setUploading(true);
+    try {
+      await uploadRoundScreenshot(lobby.id, roundNumber, file);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd wgrywania screenshota");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleStartNextRound = async () => {
     setLoading(true);
     try {
-      await startCooldown(lobby.id, minutes);
+      await startNextRound(lobby.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!confirm("Zakończyć sesję i przejść do podsumowania?")) return;
+    setLoading(true);
+    try {
+      await endLobbySession(lobby.id);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd");
     } finally {
@@ -51,7 +78,7 @@ export function PostGamePanel({
         <CardHeader>
           <CardTitle>Wybierz zwycięzcę</CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-3">
+        <CardContent className="flex flex-wrap gap-3">
           <Button onClick={() => pickWinner(1)} disabled={loading}>
             Team 1 wygrywa
           </Button>
@@ -67,41 +94,99 @@ export function PostGamePanel({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Timer przed kolejną rundą</CardTitle>
+          <CardTitle>
+            Runda {roundNumber ?? "?"} —{" "}
+            {lobby.winnerTeam ? `Team ${lobby.winnerTeam} wygrywa` : "wynik zapisany"}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="text-sm text-slate-400">Minuty</label>
-            <Input
-              type="number"
-              min={1}
-              value={minutes}
-              onChange={(e) => setMinutes(Number(e.target.value))}
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-slate-400">Screenshot z wynikami gry</p>
+            {currentRound?.screenshotUrl ? (
+              <a
+                href={currentRound.screenshotUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block overflow-hidden rounded-lg border border-slate-700"
+              >
+                <Image
+                  src={currentRound.screenshotUrl}
+                  alt={`Screenshot rundy ${roundNumber}`}
+                  width={800}
+                  height={450}
+                  className="h-auto max-h-64 w-full object-contain bg-slate-950"
+                  unoptimized
+                />
+              </a>
+            ) : (
+              <p className="text-sm text-slate-500">Brak screenshota — możesz dodać przed kolejną rundą.</p>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleScreenshot(file);
+              }}
             />
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={uploading || !roundNumber}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading
+                ? "Wgrywanie..."
+                : currentRound?.screenshotUrl
+                  ? "Zmień screenshot"
+                  : "Wgraj screenshot"}
+            </Button>
           </div>
-          <Button onClick={startTimer} disabled={loading}>
-            Uruchom timer
-          </Button>
+
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={handleStartNextRound} disabled={loading}>
+              Zacznij kolejną rundę
+            </Button>
+            <Button variant="secondary" onClick={handleEndSession} disabled={loading}>
+              Zakończ sesję
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (lobby.status === "cooldown") {
+  if (lobby.status === "post_game" && !isAdmin) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Następna runda za</CardTitle>
+          <CardTitle>
+            Runda zakończona — Team {lobby.winnerTeam} wygrywa
+          </CardTitle>
         </CardHeader>
-        <CardContent className="text-center">
-          <p className="text-5xl font-bold text-indigo-400">
-            {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
-          </p>
-          {remaining === 0 && isAdmin && onCooldownEnd && (
-            <Button className="mt-4" onClick={onCooldownEnd}>
-              Rozpocznij kolejną rundę
-            </Button>
+        <CardContent>
+          {currentRound?.screenshotUrl && (
+            <a
+              href={currentRound.screenshotUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block overflow-hidden rounded-lg border border-slate-700"
+            >
+              <Image
+                src={currentRound.screenshotUrl}
+                alt={`Screenshot rundy ${roundNumber}`}
+                width={800}
+                height={450}
+                className="h-auto max-h-64 w-full object-contain bg-slate-950"
+                unoptimized
+              />
+            </a>
           )}
+          <p className="mt-3 text-sm text-slate-400">
+            Admin przygotowuje kolejną rundę lub kończy sesję.
+          </p>
         </CardContent>
       </Card>
     );

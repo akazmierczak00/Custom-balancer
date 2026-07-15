@@ -96,13 +96,13 @@ export function WeaknessGrid({
           Za mało punktów do wydania
         </p>
       )}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) => (
-          <div key={rowIdx} className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div key={rowIdx} className="space-y-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
               Tier {rowIdx + 1}
             </p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-1.5">
               {Array.from({ length: WEAKNESS_GRID_COLS }, (_, colIdx) => {
                 const cell = weaknesses.drawn[rowIdx * WEAKNESS_GRID_COLS + colIdx];
                 if (!cell) return null;
@@ -118,35 +118,35 @@ export function WeaknessGrid({
                     disabled={!canSelect || !cell.revealed}
                     onClick={() => void handleCellClick(rowIdx, colIdx)}
                     className={cn(
-                      "min-h-24 rounded-lg border border-slate-700 bg-slate-800/80 p-3 text-left transition-all",
+                      "min-h-12 rounded-md border border-slate-700/60 bg-slate-800/60 p-1.5 text-left text-xs transition-all",
                       !cell.revealed && "opacity-30",
                       cell.revealed && !isFlashing && getRevealIntensity(cell.rarity),
                       isFlashing &&
-                        "border-red-500 bg-red-950/60 ring-2 ring-red-500/70",
+                        "border-red-500/50 bg-red-950/40 ring-1 ring-red-500/40",
                       selected &&
                         !isFlashing &&
-                        "border-amber-400/70 bg-amber-500/15 ring-2 ring-amber-400/50",
+                        "border-amber-500/35 bg-amber-500/10 ring-1 ring-amber-400/25",
                       canSelect &&
                         cell.revealed &&
                         !isFlashing &&
                         (selected
-                          ? "hover:border-slate-400 hover:bg-slate-700/80"
-                          : "hover:border-amber-400 hover:bg-amber-500/10")
+                          ? "hover:border-slate-500/60 hover:bg-slate-700/60"
+                          : "hover:border-amber-500/30 hover:bg-amber-500/5")
                     )}
                   >
                     {cell.revealed ? (
                       <>
-                        <p className="font-semibold">{cell.name}</p>
-                        <p className="mt-1 text-sm text-slate-300">{cell.text}</p>
+                        <p className="text-[11px] font-semibold leading-tight">{cell.name}</p>
+                        <p className="mt-0.5 text-[10px] leading-snug text-slate-400">{cell.text}</p>
                         {selected && (
-                          <p className="mt-2 text-xs font-semibold text-amber-300">
+                          <p className="mt-1 text-[9px] font-semibold text-amber-400/80">
                             Wybrane · {cell.tier} pkt
                             {canSelect && " · kliknij, aby odznaczyć"}
                           </p>
                         )}
                       </>
                     ) : (
-                      <p className="text-center text-slate-500">?</p>
+                      <p className="text-center text-[10px] text-slate-500">?</p>
                     )}
                   </button>
                 );

@@ -57,7 +57,7 @@ export function subscribeToActiveLobbies(
       "final",
       "playing",
       "post_game",
-      "cooldown",
+      "session_summary",
     ])
   );
 

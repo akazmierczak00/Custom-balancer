@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,14 +126,55 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
       </CardHeader>
 
       {expanded && (
-        <CardContent className="grid gap-2 sm:grid-cols-2">
-          {lobby.slots.map((uid, i) => (
-            <PlayerBanner
-              key={i}
-              player={uid ? users[uid] : undefined}
-              isCurrentUser={uid === currentUser.uid}
-            />
-          ))}
+        <CardContent className="space-y-4">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {lobby.slots.map((uid, i) => (
+              <PlayerBanner
+                key={i}
+                player={uid ? users[uid] : undefined}
+                isCurrentUser={uid === currentUser.uid}
+              />
+            ))}
+          </div>
+
+          {lobby.roundHistory?.length > 0 && (
+            <div className="space-y-3 border-t border-slate-700 pt-4">
+              <h3 className="text-sm font-semibold text-slate-300">
+                Historia rund ({lobby.roundHistory.length})
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {lobby.roundHistory.map((round) => (
+                  <div
+                    key={round.roundNumber}
+                    className="rounded-lg border border-slate-700 bg-slate-900/40 p-3"
+                  >
+                    <p className="text-sm font-medium">
+                      Runda {round.roundNumber} — Team {round.winnerTeam} wygrywa
+                    </p>
+                    {round.screenshotUrl ? (
+                      <a
+                        href={round.screenshotUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 block overflow-hidden rounded border border-slate-700"
+                      >
+                        <Image
+                          src={round.screenshotUrl}
+                          alt={`Screenshot rundy ${round.roundNumber}`}
+                          width={320}
+                          height={180}
+                          className="h-24 w-full object-cover"
+                          unoptimized
+                        />
+                      </a>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-500">Brak screenshota</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       )}
     </Card>

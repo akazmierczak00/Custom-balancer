@@ -94,8 +94,8 @@ export function getRevealDelay(_rarity?: number): number {
 }
 
 export function getRevealIntensity(rarity: number): string {
-  if (rarity <= 10) return "animate-pulse ring-2 ring-yellow-400 shadow-lg shadow-yellow-500/50";
-  if (rarity <= 30) return "ring-1 ring-purple-400 shadow-md shadow-purple-500/30";
-  if (rarity <= 60) return "ring-1 ring-blue-300";
+  if (rarity <= 10) return "ring-1 ring-yellow-500/25 shadow-sm shadow-yellow-500/10";
+  if (rarity <= 30) return "ring-1 ring-purple-500/20 shadow-sm shadow-purple-500/10";
+  if (rarity <= 60) return "ring-1 ring-blue-400/15";
   return "";
 }

@@ -36,6 +36,7 @@ import {
   isTestBotUid,
   TEST_BOT_DEFINITIONS,
 } from "@/lib/lobby/test-bots";
+import { uploadLobbyRoundScreenshot } from "@/lib/firebase/storage";
 import {
   Lobby,
   LobbyPlayer,
@@ -98,6 +99,30 @@ function confirmPhaseUpdates(): Record<string, unknown> {
   };
 }
 
+async function refreshTeamAssignments(
+  team: PlayerAssignment[]
+): Promise<PlayerAssignment[]> {
+  const refreshed: PlayerAssignment[] = [];
+
+  for (const player of team) {
+    const snap = await getDoc(doc(getFirebaseDb(), "users", player.uid));
+    if (!snap.exists()) {
+      refreshed.push(player);
+      continue;
+    }
+
+    const data = snap.data() as UserProfile;
+    refreshed.push({
+      ...player,
+      wins: data.wins,
+      losses: data.losses,
+      matchHistory: data.matchHistory,
+    });
+  }
+
+  return refreshed;
+}
+
 export async function createLobby(adminUid: string): Promise<string> {
   const ref = await addDoc(collection(getFirebaseDb(), "lobbies"), {
     createdBy: adminUid,
@@ -114,6 +139,7 @@ export async function createLobby(adminUid: string): Promise<string> {
     reshuffleBonusGranted: false,
     weaknesses: defaultWeaknessesState(),
     winnerTeam: null,
+    roundHistory: [],
     cooldownMinutes: null,
     cooldownEndsAt: null,
     phaseTimerEndsAt: null,
@@ -921,14 +947,22 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
       losers.map((player) => tx.get(doc(getFirebaseDb(), "users", player.uid)))
     );
 
+    const updatedProfiles = new Map<string, UserProfile>();
+
     winners.forEach((player, index) => {
       const userSnap = winnerSnaps[index];
       if (!userSnap.exists()) return;
 
       const data = userSnap.data() as UserProfile;
+      const matchHistory = [...data.matchHistory, "W"].slice(-10);
+      updatedProfiles.set(player.uid, {
+        ...data,
+        wins: data.wins + 1,
+        matchHistory,
+      });
       tx.update(doc(getFirebaseDb(), "users", player.uid), {
         wins: data.wins + 1,
-        matchHistory: [...data.matchHistory, "W"].slice(-10),
+        matchHistory,
       });
     });
 
@@ -937,42 +971,120 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
       if (!userSnap.exists()) return;
 
       const data = userSnap.data() as UserProfile;
+      const matchHistory = [...data.matchHistory, "L"].slice(-10);
+      updatedProfiles.set(player.uid, {
+        ...data,
+        losses: data.losses + 1,
+        matchHistory,
+      });
       tx.update(doc(getFirebaseDb(), "users", player.uid), {
         losses: data.losses + 1,
-        matchHistory: [...data.matchHistory, "L"].slice(-10),
+        matchHistory,
       });
     });
+
+    const syncTeam = (teamPlayers: PlayerAssignment[]) =>
+      teamPlayers.map((player) => {
+        const profile = updatedProfiles.get(player.uid);
+        if (!profile) return player;
+        return {
+          ...player,
+          wins: profile.wins,
+          losses: profile.losses,
+          matchHistory: profile.matchHistory,
+        };
+      });
+
+    const team1 = syncTeam(lobby.team1);
+    const team2 = syncTeam(lobby.team2);
+    const roundNumber = (lobby.roundHistory?.length ?? 0) + 1;
 
     tx.update(lobbyRef, {
       status: "post_game",
       winnerTeam: team,
+      team1: toFirestoreTeam(team1),
+      team2: toFirestoreTeam(team2),
+      roundHistory: [
+        ...(lobby.roundHistory ?? []),
+        {
+          roundNumber,
+          team1: toFirestoreTeam(team1),
+          team2: toFirestoreTeam(team2),
+          winnerTeam: team,
+          selectedWeaknesses: lobby.weaknesses?.selected ?? [],
+          completedAt: serverTimestamp(),
+        },
+      ],
       updatedAt: serverTimestamp(),
     });
   });
 }
 
-export async function startCooldown(lobbyId: string, minutes: number) {
-  await updateDoc(doc(getFirebaseDb(), "lobbies", lobbyId), {
-    status: "cooldown",
-    cooldownMinutes: minutes,
-    cooldownEndsAt: Timestamp.fromMillis(Date.now() + minutes * 60 * 1000),
-    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + minutes * 60 * 1000),
+export async function updateRoundMedia(
+  lobbyId: string,
+  roundNumber: number,
+  data: { screenshotUrl?: string; youtubeUrl?: string }
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+  const roundHistory = (lobby.roundHistory ?? []).map((round) =>
+    round.roundNumber === roundNumber ? { ...round, ...data } : round
+  );
+
+  await updateDoc(lobbyRef, {
+    roundHistory,
     updatedAt: serverTimestamp(),
   });
 }
 
-export async function restartAfterCooldown(lobbyId: string) {
-  await updateDoc(doc(getFirebaseDb(), "lobbies", lobbyId), {
+export async function uploadRoundScreenshot(
+  lobbyId: string,
+  roundNumber: number,
+  file: File
+) {
+  const screenshotUrl = await uploadLobbyRoundScreenshot(lobbyId, roundNumber, file);
+  await updateRoundMedia(lobbyId, roundNumber, { screenshotUrl });
+  return screenshotUrl;
+}
+
+export async function startNextRound(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+  const team1 = await refreshTeamAssignments(lobby.team1);
+  const team2 = await refreshTeamAssignments(lobby.team2);
+
+  await updateDoc(lobbyRef, {
     status: "reveal",
+    team1: toFirestoreTeam(team1),
+    team2: toFirestoreTeam(team2),
     revealRoleIndex: 0,
     votes: defaultVotes(),
+    proposalA: null,
+    proposalB: null,
     weaknesses: defaultWeaknessesState(),
     winnerTeam: null,
-    cooldownMinutes: null,
-    cooldownEndsAt: null,
     phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + REVEAL_SECONDS * 1000),
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function endLobbySession(lobbyId: string) {
+  await updateDoc(doc(getFirebaseDb(), "lobbies", lobbyId), {
+    status: "session_summary",
+    phaseTimerEndsAt: null,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** @deprecated Use startNextRound instead */
+export async function restartAfterCooldown(lobbyId: string) {
+  return startNextRound(lobbyId);
 }
 
 export async function saveUserProfile(
@@ -1122,7 +1234,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       break;
     case "playing":
     case "post_game":
-    case "cooldown":
+    case "session_summary":
       updates.phaseTimerEndsAt = null;
       break;
     default:
