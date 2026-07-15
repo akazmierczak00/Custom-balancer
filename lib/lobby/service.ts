@@ -51,6 +51,8 @@ import {
 } from "@/types";
 
 const LOBBY_SIZE = 10;
+const PRE_REVEAL_SECONDS = 10;
+const PRE_REVEAL_ROLE_INDEX = -1;
 const REVEAL_SECONDS = 5;
 const CONFIRM_SECONDS = 20;
 const VOTE_LOCK_SECONDS = 10;
@@ -96,6 +98,13 @@ function confirmPhaseUpdates(): Record<string, unknown> {
     status: "confirming" as LobbyStatus,
     acceptDeadline: Timestamp.fromMillis(Date.now() + CONFIRM_SECONDS * 1000),
     phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + CONFIRM_SECONDS * 1000),
+  };
+}
+
+function preRevealPhaseUpdates(): Record<string, unknown> {
+  return {
+    revealRoleIndex: PRE_REVEAL_ROLE_INDEX,
+    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + PRE_REVEAL_SECONDS * 1000),
   };
 }
 
@@ -480,8 +489,7 @@ export async function draftTeams(lobbyId: string) {
     team1: toFirestoreTeam(proposal.team1),
     team2: toFirestoreTeam(proposal.team2),
     status: "reveal",
-    revealRoleIndex: 0,
-    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + REVEAL_SECONDS * 1000),
+    ...preRevealPhaseUpdates(),
     updatedAt: serverTimestamp(),
   });
 }
@@ -1097,13 +1105,12 @@ export async function startNextRound(lobbyId: string) {
     status: "reveal",
     team1: toFirestoreTeam(team1),
     team2: toFirestoreTeam(team2),
-    revealRoleIndex: 0,
+    ...preRevealPhaseUpdates(),
     votes: defaultVotes(),
     proposalA: null,
     proposalB: null,
     weaknesses: defaultWeaknessesState(),
     winnerTeam: null,
-    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + REVEAL_SECONDS * 1000),
     updatedAt: serverTimestamp(),
   });
 }
@@ -1194,10 +1201,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       updates.phaseTimerEndsAt = null;
       break;
     case "reveal":
-      updates.revealRoleIndex = 0;
-      updates.phaseTimerEndsAt = Timestamp.fromMillis(
-        Date.now() + REVEAL_SECONDS * 1000
-      );
+      Object.assign(updates, preRevealPhaseUpdates());
       break;
     case "overview":
       updates.phaseTimerEndsAt = null;

@@ -266,6 +266,16 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             </Button>
           )}
           {remaining > 0 &&
+            isAdmin &&
+            (lobby.status === "reveal" || lobby.status === "reshuffle_reveal") && (
+            <div className="text-right">
+              <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
+              {lobby.status === "reveal" && lobby.revealRoleIndex < 0 && (
+                <p className="text-xs text-slate-400">Do revealu Top</p>
+              )}
+            </div>
+          )}
+          {remaining > 0 &&
             lobby.status !== "reveal" &&
             lobby.status !== "reshuffle_reveal" && (
             <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
@@ -303,8 +313,14 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         </div>
       )}
 
-      {lobby.status === "reveal" && (
+      {lobby.status === "reveal" && lobby.revealRoleIndex >= 0 && (
         <RoleReveal lobby={lobby} currentUid={profile.uid} />
+      )}
+
+      {lobby.status === "reveal" && lobby.revealRoleIndex < 0 && isAdmin && (
+        <p className="text-center text-sm text-slate-400">
+          Oczekiwanie przed revealem Top lane...
+        </p>
       )}
 
       {lobby.status === "reshuffle_reveal" && (
