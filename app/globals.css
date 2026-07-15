@@ -95,19 +95,21 @@ body {
   --color-red-400: #ff7aa0;
   --color-red-300: #ff9eb8;
   --y2k-page-gradient:
-    radial-gradient(ellipse 85% 55% at 18% 8%, rgb(255 126 200 / 0.24) 0%, transparent 58%),
-    radial-gradient(ellipse 70% 50% at 82% 18%, rgb(255 45 155 / 0.18) 0%, transparent 54%),
-    radial-gradient(ellipse 80% 45% at 50% 92%, rgb(90 40 96 / 0.32) 0%, transparent 56%),
-    radial-gradient(ellipse 55% 40% at 6% 72%, rgb(233 30 140 / 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 38% at 94% 68%, rgb(255 148 210 / 0.12) 0%, transparent 48%),
+    radial-gradient(ellipse 90% 58% at 14% 6%, rgb(255 94 210 / 0.4) 0%, transparent 56%),
+    radial-gradient(ellipse 78% 52% at 86% 10%, rgb(255 45 155 / 0.34) 0%, transparent 54%),
+    radial-gradient(ellipse 88% 48% at 52% 96%, rgb(255 126 200 / 0.3) 0%, transparent 58%),
+    radial-gradient(ellipse 62% 44% at 8% 68%, rgb(255 148 210 / 0.26) 0%, transparent 50%),
+    radial-gradient(ellipse 58% 40% at 92% 62%, rgb(255 94 210 / 0.22) 0%, transparent 48%),
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgb(255 200 235 / 0.12) 0%, transparent 62%),
     linear-gradient(
-      168deg,
-      #140414 0%,
-      #2a1028 20%,
-      #4a1e4c 46%,
-      #3d1a3a 68%,
-      #251020 86%,
-      #1a0618 100%
+      162deg,
+      #2a0830 0%,
+      #4a1248 14%,
+      #6a1a58 32%,
+      #8a2d78 48%,
+      #5c1a62 64%,
+      #4a1548 80%,
+      #2a0830 100%
     );
 }
 
