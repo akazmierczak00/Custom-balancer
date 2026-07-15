@@ -75,8 +75,8 @@ export interface PlayerAssignment {
   nick: string;
   rank: LoLRank;
   role: LoLRole;
-  rolePriorities: RolePriorityGroup[];
   matchHistory: MatchResult[];
+  rolePrioritiesLabel?: string;
 }
 
 export interface TeamProposal {

@@ -7,6 +7,7 @@ import {
   where,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/config";
+import { normalizeLobby } from "@/lib/lobby/firestore-lobby";
 import { Lobby, UserProfile, Weakness } from "@/types";
 
 export function subscribeToUser(
@@ -31,7 +32,7 @@ export function subscribeToLobby(
       callback(null);
       return;
     }
-    callback({ id: snap.id, ...snap.data() } as Lobby);
+    callback(normalizeLobby({ id: snap.id, ...snap.data() } as Lobby));
   });
 }
 
@@ -62,7 +63,7 @@ export function subscribeToActiveLobbies(
 
   return onSnapshot(q, (snap) => {
     callback(
-      snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Lobby)
+      snap.docs.map((d) => normalizeLobby({ id: d.id, ...d.data() } as Lobby))
     );
   });
 }

@@ -40,23 +40,29 @@ export function PlayerBanner({
   const nick = "nick" in player ? player.nick : "";
   const rank = "rank" in player ? player.rank : "";
   const matchHistory = "matchHistory" in player ? player.matchHistory : [];
-  const rolePriorities =
+  const rolePrioritiesLabel =
+    "rolePrioritiesLabel" in player ? player.rolePrioritiesLabel : undefined;
+  const legacyRolePriorities =
     "rolePriorities" in player ? player.rolePriorities : undefined;
   const isTestBot =
     ("isTestBot" in player && player.isTestBot) ||
     ("uid" in player && isTestBotUid(player.uid));
 
   const rankLabel = rank ? getRankLabel(rank as never) : "Brak rangi";
-  const rolePrioritiesLine = rolePriorities
+  const rolePrioritiesLine = rolePrioritiesLabel
     ? mirrored
-      ? [...rolePriorities]
-          .sort((a, b) => b.priority - a.priority)
-          .map((group) =>
-            group.roles.map((r) => getRoleLabel(r).toUpperCase()).join(" = ")
-          )
-          .join(" < ")
-      : formatRolePriorities(rolePriorities)
-    : null;
+      ? rolePrioritiesLabel.split(" > ").reverse().join(" < ")
+      : rolePrioritiesLabel
+    : legacyRolePriorities
+      ? mirrored
+        ? [...legacyRolePriorities]
+            .sort((a, b) => b.priority - a.priority)
+            .map((group) =>
+              group.roles.map((r) => getRoleLabel(r).toUpperCase()).join(" = ")
+            )
+            .join(" < ")
+        : formatRolePriorities(legacyRolePriorities)
+      : null;
 
   return (
     <div

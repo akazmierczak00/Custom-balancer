@@ -1,5 +1,6 @@
 import { LobbyPlayer, LoLRank, PlayerAssignment, TeamProposal } from "@/types";
 import { RANK_POINTS } from "@/lib/constants/ranks";
+import { formatRolePriorities } from "@/lib/constants/roles";
 import { LoLRole } from "@/types";
 
 const ALL_ROLES: LoLRole[] = ["top", "jungle", "mid", "adc", "support"];
@@ -134,7 +135,7 @@ export function assignRoles(
         nick: player.nick,
         rank: player.rank,
         role,
-        rolePriorities: player.rolePriorities,
+        rolePrioritiesLabel: formatRolePriorities(player.rolePriorities),
         matchHistory: player.matchHistory,
       });
     }

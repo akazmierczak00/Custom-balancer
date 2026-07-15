@@ -27,6 +27,11 @@ import {
 } from "@/lib/algorithms/drawWeaknesses";
 import { compareRanks } from "@/lib/constants/ranks";
 import {
+  toFirestoreProposal,
+  toFirestoreTeam,
+  toFirestoreWeaknesses,
+} from "@/lib/lobby/firestore-lobby";
+import {
   getAvailableTestBots,
   isTestBotUid,
   TEST_BOT_DEFINITIONS,
@@ -341,8 +346,8 @@ export async function draftTeams(lobbyId: string) {
   const proposal = buildFullProposal(players);
 
   await updateDoc(lobbyRef, {
-    team1: proposal.team1,
-    team2: proposal.team2,
+    team1: toFirestoreTeam(proposal.team1),
+    team2: toFirestoreTeam(proposal.team2),
     status: "reveal",
     revealRoleIndex: 0,
     phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + REVEAL_SECONDS * 1000),
@@ -480,8 +485,8 @@ export async function resolveLineupVote(lobbyId: string) {
 
     await updateDoc(lobbyRef, {
       status: "reshuffle_reveal",
-      proposalA,
-      proposalB,
+      proposalA: toFirestoreProposal(proposalA),
+      proposalB: toFirestoreProposal(proposalB),
       revealRoleIndex: 0,
       votes: defaultVotes(),
       reshuffleBonusGranted: adrianVotedReshuffle,
@@ -599,9 +604,10 @@ export async function castProposalVoteForTeam(lobbyId: string, choice: "A" | "B"
 }
 
 function applyProposal(lobby: Lobby, proposal: TeamProposal) {
+  const safe = toFirestoreProposal(proposal);
   return {
-    team1: proposal.team1,
-    team2: proposal.team2,
+    team1: safe.team1,
+    team2: safe.team2,
     proposalA: null,
     proposalB: null,
   };
@@ -636,6 +642,11 @@ export async function resolveProposalVote(lobbyId: string) {
 }
 
 export async function startWeaknessReveal(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const lobbySnap = await getDoc(lobbyRef);
+  if (!lobbySnap.exists()) throw new Error("Lobby nie istnieje");
+  const lobby = lobbySnap.data() as Lobby;
+
   const weaknessesSnap = await getDocs(collection(getFirebaseDb(), "weaknesses"));
   const weaknesses = weaknessesSnap.docs.map(
     (d) => ({ id: d.id, ...d.data() }) as Weakness
@@ -647,14 +658,18 @@ export async function startWeaknessReveal(lobbyId: string) {
 
   const drawn = flattenWeaknessGrid(drawWeaknessGrid(weaknesses));
 
-  await updateDoc(doc(getFirebaseDb(), "lobbies", lobbyId), {
+  await updateDoc(lobbyRef, {
     status: "weakness_reveal",
-    weaknesses: {
+    team1: toFirestoreTeam(lobby.team1),
+    team2: toFirestoreTeam(lobby.team2),
+    proposalA: lobby.proposalA ? toFirestoreProposal(lobby.proposalA) : null,
+    proposalB: lobby.proposalB ? toFirestoreProposal(lobby.proposalB) : null,
+    weaknesses: toFirestoreWeaknesses({
       ...defaultWeaknessesState(),
       drawn,
       pointsTotal: 3,
       revealIndex: 0,
-    },
+    }),
     updatedAt: serverTimestamp(),
   });
 }
@@ -673,13 +688,13 @@ export async function revealNextWeakness(lobbyId: string) {
     const pointsTotal = 3 + (lobby.reshuffleBonusGranted ? 1 : 0);
     await updateDoc(lobbyRef, {
       status: "weakness_pick",
-      weaknesses: {
+      weaknesses: toFirestoreWeaknesses({
         ...lobby.weaknesses,
         drawn,
         selectorUid,
         pointsTotal,
         revealIndex: drawn.length,
-      },
+      }),
       updatedAt: serverTimestamp(),
     });
     return;
@@ -688,11 +703,11 @@ export async function revealNextWeakness(lobbyId: string) {
   drawn[nextIndex] = { ...drawn[nextIndex], revealed: true };
 
   await updateDoc(lobbyRef, {
-    weaknesses: {
+    weaknesses: toFirestoreWeaknesses({
       ...lobby.weaknesses,
       drawn,
       revealIndex: nextIndex + 1,
-    },
+    }),
     updatedAt: serverTimestamp(),
   });
 }
@@ -743,11 +758,11 @@ export async function selectWeakness(
     };
 
     tx.update(lobbyRef, {
-      weaknesses: {
+      weaknesses: toFirestoreWeaknesses({
         ...lobby.weaknesses,
         selected: [...lobby.weaknesses.selected, selected],
         pointsSpent: newSpent,
-      },
+      }),
       updatedAt: serverTimestamp(),
     });
   });
@@ -769,7 +784,10 @@ export async function confirmWeaknesses(lobbyId: string, uid: string) {
 
     tx.update(lobbyRef, {
       status: "final",
-      weaknesses: { ...lobby.weaknesses, confirmed: true },
+      weaknesses: toFirestoreWeaknesses({
+        ...lobby.weaknesses,
+        confirmed: true,
+      }),
       updatedAt: serverTimestamp(),
     });
   });
@@ -943,8 +961,8 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       }
       const players = await fetchLobbyPlayers(uids);
       const { proposalA, proposalB } = generateDistinctProposals(players);
-      updates.proposalA = proposalA;
-      updates.proposalB = proposalB;
+      updates.proposalA = toFirestoreProposal(proposalA);
+      updates.proposalB = toFirestoreProposal(proposalB);
       updates.revealRoleIndex = 0;
       updates.votes = defaultVotes();
       updates.phaseTimerEndsAt = Timestamp.fromMillis(
@@ -965,8 +983,8 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
         proposalA = proposals.proposalA;
         proposalB = proposals.proposalB;
       }
-      updates.proposalA = proposalA;
-      updates.proposalB = proposalB;
+      updates.proposalA = toFirestoreProposal(proposalA);
+      updates.proposalB = toFirestoreProposal(proposalB);
       updates.votes = defaultVotes();
       updates.phaseTimerEndsAt = null;
       break;
@@ -977,7 +995,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
         throw new Error("Najpierw wylosuj osłabienia");
       }
       const drawn = existing.map((cell) => ({ ...cell, revealed: true }));
-      updates.weaknesses = {
+      updates.weaknesses = toFirestoreWeaknesses({
         ...lobby.weaknesses,
         drawn,
         selectorUid: findWeaknessSelector(lobby),
@@ -986,7 +1004,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
         selected: [],
         confirmed: false,
         revealIndex: drawn.length,
-      };
+      });
       updates.phaseTimerEndsAt = null;
       break;
     }
