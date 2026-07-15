@@ -46,6 +46,22 @@ export function PlayerBanner({
     ("isTestBot" in player && player.isTestBot) ||
     ("uid" in player && isTestBotUid(player.uid));
 
+  const rankLabel = rank ? getRankLabel(rank as never) : "Brak rangi";
+  const roleLabel = role ? getRoleLabel(role) : "";
+  const rankRoleLine = mirrored
+    ? [roleLabel, rankLabel].filter(Boolean).join(" · ")
+    : [rankLabel, roleLabel].filter(Boolean).join(" · ");
+  const rolePrioritiesLine = rolePriorities
+    ? mirrored
+      ? [...rolePriorities]
+          .sort((a, b) => b.priority - a.priority)
+          .map((group) =>
+            group.roles.map((r) => getRoleLabel(r).toUpperCase()).join(" = ")
+          )
+          .join(" < ")
+      : formatRolePriorities(rolePriorities)
+    : null;
+
   return (
     <div
       className={cn(
@@ -69,14 +85,9 @@ export function PlayerBanner({
               </span>
             )}
           </p>
-          <p className="text-xs text-slate-400">
-            {rank ? getRankLabel(rank as never) : "Brak rangi"}
-            {role ? ` · ${getRoleLabel(role)}` : ""}
-          </p>
-          {rolePriorities && (
-            <p className="mt-1 text-xs text-indigo-300">
-              {formatRolePriorities(rolePriorities)}
-            </p>
+          <p className="text-xs text-slate-400">{rankRoleLine}</p>
+          {rolePrioritiesLine && (
+            <p className="mt-1 text-xs text-indigo-300">{rolePrioritiesLine}</p>
           )}
         </div>
         <div className="flex gap-1">
@@ -87,7 +98,7 @@ export function PlayerBanner({
       <div
         className={cn(
           "mt-auto flex gap-1 pt-3",
-          mirrored && "flex-row-reverse justify-end"
+          mirrored ? "flex-row-reverse justify-start" : "justify-start"
         )}
       >
         {Array.from({ length: 10 }).map((_, i) => {
