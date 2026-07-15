@@ -25,7 +25,6 @@ import {
   revealNextWeakness,
   selectWeakness,
   startLineupVoting,
-  startPlaying,
   startWeaknessReveal,
 } from "@/lib/lobby/service";
 import { getWeaknessCellIndex, WEAKNESS_REVEAL_DELAY_MS } from "@/lib/algorithms/drawWeaknesses";
@@ -363,18 +362,6 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
                 Zatwierdź osłabienia
               </Button>
             </div>
-          )}
-        </div>
-      )}
-
-      {lobby.status === "final" && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-6 text-center">
-          <h2 className="text-xl font-bold text-emerald-300">Ostateczny skład</h2>
-          <p className="mt-2 text-slate-300">Gra może się rozpocząć.</p>
-          {isAdmin && (
-            <Button className="mt-4" onClick={() => startPlaying(lobby.id)}>
-              Rozpocznij grę
-            </Button>
           )}
         </div>
       )}

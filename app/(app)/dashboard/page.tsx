@@ -6,9 +6,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/auth-provider";
 import { logout } from "@/lib/firebase/auth";
-import { subscribeToActiveLobbies, subscribeToUsers } from "@/lib/firebase/firestore";
+import {
+  subscribeToActiveLobbies,
+  subscribeToAllUsers,
+  subscribeToUsers,
+} from "@/lib/firebase/firestore";
 import { createLobby } from "@/lib/lobby/service";
+import { getRankLabel } from "@/lib/constants/ranks";
 import { LobbyTile } from "@/components/lobby/lobby-tile";
+import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { Lobby, UserProfile } from "@/types";
 
 export default function DashboardPage() {
@@ -16,6 +22,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -36,6 +43,11 @@ export default function DashboardPage() {
     return subscribeToUsers(allUids, setUsers);
   }, [allUids]);
 
+  useEffect(() => {
+    if (profile?.role !== "admin") return;
+    return subscribeToAllUsers(setAllUsers);
+  }, [profile?.role]);
+
   const handleCreateLobby = async () => {
     if (!profile) return;
     setCreating(true);
@@ -47,6 +59,14 @@ export default function DashboardPage() {
       setCreating(false);
     }
   };
+
+  const manageableUsers = useMemo(
+    () =>
+      allUsers
+        .filter((entry) => !isTestBotUid(entry.uid) && !entry.isTestBot)
+        .sort((a, b) => a.nick.localeCompare(b.nick, "pl")),
+    [allUsers]
+  );
 
   if (loading || !profile) {
     return <div className="flex min-h-screen items-center justify-center">Ładowanie...</div>;
@@ -80,6 +100,30 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {profile.role === "admin" && (
+        <div className="space-y-3 rounded-xl border border-slate-700 p-4">
+          <h2 className="text-lg font-semibold">Użytkownicy</h2>
+          {manageableUsers.length === 0 ? (
+            <p className="text-sm text-slate-400">Brak użytkowników.</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {manageableUsers.map((entry) => (
+                <Link
+                  key={entry.uid}
+                  href={`/profile/${entry.uid}`}
+                  className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 transition-colors hover:border-indigo-500/50 hover:bg-slate-800/60"
+                >
+                  <span className="font-medium text-slate-100">{entry.nick || "Bez nicku"}</span>
+                  <span className="text-sm text-slate-400">
+                    {entry.rank ? getRankLabel(entry.rank) : "Brak rangi"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Aktywne lobby</h2>

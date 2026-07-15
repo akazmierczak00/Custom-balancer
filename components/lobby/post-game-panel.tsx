@@ -45,7 +45,7 @@ export function PostGamePanel({
     }
   };
 
-  if (lobby.status === "playing" && isAdmin) {
+  if ((lobby.status === "final" || lobby.status === "playing") && isAdmin) {
     return (
       <Card>
         <CardHeader>

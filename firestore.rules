@@ -28,7 +28,7 @@ service cloud.firestore {
         isAdmin() ||
         (
           request.auth.uid == userId &&
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'createdAt'])
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'createdAt', 'rank'])
         )
       );
       allow delete: if isAdmin();

@@ -35,6 +35,7 @@ export default function ProfilePage() {
       </div>
       <ProfileForm
         profile={profile}
+        allowRankEdit={profile.role === "admin"}
         onSaved={() => router.push("/dashboard")}
       />
     </div>

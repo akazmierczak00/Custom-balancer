@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { RANKS } from "@/lib/constants/ranks";
+import { RANKS, getRankLabel } from "@/lib/constants/ranks";
 import {
   DEFAULT_ROLE_PRIORITIES,
   normalizeRolePriorities,
@@ -18,6 +18,8 @@ import { LoLRole, RolePriorityGroup, UserProfile } from "@/types";
 interface ProfileFormProps {
   profile: UserProfile;
   onSaved?: () => void;
+  allowRankEdit?: boolean;
+  title?: string;
 }
 
 interface DragState {
@@ -32,7 +34,12 @@ function getInitialPriorities(profile: UserProfile): RolePriorityGroup[] {
   return normalizeRolePriorities(DEFAULT_ROLE_PRIORITIES);
 }
 
-export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
+export function ProfileForm({
+  profile,
+  onSaved,
+  allowRankEdit = false,
+  title = "Twój profil",
+}: ProfileFormProps) {
   const [nick, setNick] = useState(profile.nick);
   const [rank, setRank] = useState(profile.rank);
   const [priorities, setPriorities] = useState<RolePriorityGroup[]>(() =>
@@ -92,7 +99,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
       setError("Nick jest wymagany");
       return;
     }
-    if (!rank) {
+    if (allowRankEdit && !rank) {
       setError("Wybierz rangę");
       return;
     }
@@ -103,12 +110,17 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
 
     setSaving(true);
     try {
-      await saveUserProfile(profile.uid, {
+      const payload: Partial<UserProfile> = {
         nick: nick.trim(),
-        rank,
         rolePriorities: priorities.filter((group) => group.roles.length > 0),
         profileComplete: true,
-      });
+      };
+
+      if (allowRankEdit) {
+        payload.rank = rank;
+      }
+
+      await saveUserProfile(profile.uid, payload);
       onSaved?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Błąd zapisu");
@@ -120,7 +132,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Twój profil</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -135,19 +147,25 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="rank">Ranga (LoL)</Label>
-          <select
-            id="rank"
-            value={rank}
-            onChange={(e) => setRank(e.target.value as UserProfile["rank"])}
-            className="flex h-10 w-full rounded-md border border-slate-600 bg-slate-900 px-3 text-sm text-slate-100"
-          >
-            <option value="">Wybierz rangę</option>
-            {RANKS.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          {allowRankEdit ? (
+            <select
+              id="rank"
+              value={rank}
+              onChange={(e) => setRank(e.target.value as UserProfile["rank"])}
+              className="flex h-10 w-full rounded-md border border-slate-600 bg-slate-900 px-3 text-sm text-slate-100"
+            >
+              <option value="">Wybierz rangę</option>
+              {RANKS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-200">
+              {rank ? getRankLabel(rank) : "Nie ustawiona — poproś admina o ustawienie rangi"}
+            </p>
+          )}
         </div>
 
         <div className="space-y-3">

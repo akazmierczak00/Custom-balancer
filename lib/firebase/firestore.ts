@@ -68,6 +68,16 @@ export function subscribeToActiveLobbies(
   });
 }
 
+export function subscribeToAllUsers(
+  callback: (users: UserProfile[]) => void
+): Unsubscribe {
+  return onSnapshot(collection(getFirebaseDb(), "users"), (snap) => {
+    callback(
+      snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as UserProfile)
+    );
+  });
+}
+
 export function subscribeToWeaknesses(
   callback: (weaknesses: Weakness[]) => void
 ): Unsubscribe {
