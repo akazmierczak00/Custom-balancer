@@ -379,7 +379,7 @@ const ICONS: Record<DecorationVariant, ComponentType<{ className?: string }>> = 
   "star-tiny": StarTiny,
 };
 
-function DecorationItem({ item }: { item: Decoration }) {
+function DecorationItem({ item, index }: { item: Decoration; index: number }) {
   const Icon = ICONS[item.variant];
   const style: CSSProperties = {
     top: item.top,
@@ -388,7 +388,9 @@ function DecorationItem({ item }: { item: Decoration }) {
     width: item.size,
     height: item.size,
     opacity: item.opacity,
-    transform: `rotate(${item.rotate})`,
+    ["--decoration-rotate" as string]: item.rotate,
+    animationDelay: `${(index * 0.31) % 4.2}s`,
+    animationDuration: `${4.8 + (index % 4) * 0.35}s`,
   };
 
   return (
@@ -402,7 +404,7 @@ export function DashboardY2kDecorations() {
   return (
     <div className="dashboard-decorations" aria-hidden>
       {DECORATIONS.map((item, index) => (
-        <DecorationItem key={`${item.variant}-${index}`} item={item} />
+        <DecorationItem key={`${item.variant}-${index}`} item={item} index={index} />
       ))}
     </div>
   );

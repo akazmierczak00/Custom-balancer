@@ -96,13 +96,13 @@ export function WeaknessGrid({
           Za mało punktów do wydania
         </p>
       )}
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) => (
-          <div key={rowIdx} className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <div key={rowIdx} className="space-y-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               Tier {rowIdx + 1}
             </p>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 gap-2">
               {Array.from({ length: WEAKNESS_GRID_COLS }, (_, colIdx) => {
                 const cell = weaknesses.drawn[rowIdx * WEAKNESS_GRID_COLS + colIdx];
                 if (!cell) return null;
@@ -118,7 +118,7 @@ export function WeaknessGrid({
                     disabled={!canSelect || !cell.revealed}
                     onClick={() => void handleCellClick(rowIdx, colIdx)}
                     className={cn(
-                      "min-h-12 rounded-md border border-slate-700/60 bg-slate-800/60 p-1.5 text-left text-xs transition-all",
+                      "min-h-14 rounded-md border border-slate-700/60 bg-slate-800/60 p-2 text-left text-sm transition-all",
                       !cell.revealed && "opacity-30",
                       cell.revealed && !isFlashing && getRevealIntensity(cell.rarity),
                       isFlashing &&
@@ -136,17 +136,17 @@ export function WeaknessGrid({
                   >
                     {cell.revealed ? (
                       <>
-                        <p className="text-[11px] font-semibold leading-tight">{cell.name}</p>
-                        <p className="mt-0.5 text-[10px] leading-snug text-slate-400">{cell.text}</p>
+                        <p className="text-xs font-semibold leading-tight">{cell.name}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{cell.text}</p>
                         {selected && (
-                          <p className="mt-1 text-[9px] font-semibold text-amber-400/80">
+                          <p className="mt-1 text-[10px] font-semibold text-amber-400/80">
                             Wybrane · {cell.tier} pkt
                             {canSelect && " · kliknij, aby odznaczyć"}
                           </p>
                         )}
                       </>
                     ) : (
-                      <p className="text-center text-[10px] text-slate-500">?</p>
+                      <p className="text-center text-[11px] text-slate-500">?</p>
                     )}
                   </button>
                 );

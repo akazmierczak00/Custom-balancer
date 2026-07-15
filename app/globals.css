@@ -94,11 +94,35 @@ body {
   --color-red-500: #ff5c8a;
   --color-red-400: #ff7aa0;
   --color-red-300: #ff9eb8;
+  --y2k-page-gradient:
+    radial-gradient(ellipse 85% 55% at 18% 8%, rgb(255 126 200 / 0.24) 0%, transparent 58%),
+    radial-gradient(ellipse 70% 50% at 82% 18%, rgb(255 45 155 / 0.18) 0%, transparent 54%),
+    radial-gradient(ellipse 80% 45% at 50% 92%, rgb(90 40 96 / 0.32) 0%, transparent 56%),
+    radial-gradient(ellipse 55% 40% at 6% 72%, rgb(233 30 140 / 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 38% at 94% 68%, rgb(255 148 210 / 0.12) 0%, transparent 48%),
+    linear-gradient(
+      168deg,
+      #140414 0%,
+      #2a1028 20%,
+      #4a1e4c 46%,
+      #3d1a3a 68%,
+      #251020 86%,
+      #1a0618 100%
+    );
 }
 
 [data-theme="y2k"] html,
 [data-theme="y2k"] body {
-  background-color: var(--background);
+  background: transparent;
+}
+
+[data-theme="y2k"] html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--y2k-page-gradient);
 }
 
 /* Y2K diamond WordArt logo image */
@@ -235,29 +259,6 @@ body {
   background: transparent;
 }
 
-[data-theme="y2k"] .dashboard-screen::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 85% 55% at 18% 8%, rgb(255 126 200 / 0.24) 0%, transparent 58%),
-    radial-gradient(ellipse 70% 50% at 82% 18%, rgb(255 45 155 / 0.18) 0%, transparent 54%),
-    radial-gradient(ellipse 80% 45% at 50% 92%, rgb(90 40 96 / 0.32) 0%, transparent 56%),
-    radial-gradient(ellipse 55% 40% at 6% 72%, rgb(233 30 140 / 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 38% at 94% 68%, rgb(255 148 210 / 0.12) 0%, transparent 48%),
-    linear-gradient(
-      168deg,
-      #140414 0%,
-      #2a1028 20%,
-      #4a1e4c 46%,
-      #3d1a3a 68%,
-      #251020 86%,
-      #1a0618 100%
-    );
-}
-
 [data-theme="y2k"] .dashboard-decorations {
   position: fixed;
   inset: 0;
@@ -272,6 +273,25 @@ body {
   position: absolute;
   pointer-events: none;
   transform-origin: center center;
+  animation: dashboard-decoration-float 5s ease-in-out infinite;
+}
+
+@keyframes dashboard-decoration-float {
+  0%,
+  100% {
+    transform: rotate(var(--decoration-rotate, 0deg)) translateY(0);
+  }
+
+  50% {
+    transform: rotate(calc(var(--decoration-rotate, 0deg) + 2deg)) translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="y2k"] .dashboard-decoration {
+    animation: none;
+    transform: rotate(var(--decoration-rotate, 0deg));
+  }
 }
 
 [data-theme="y2k"] .dashboard-content {
