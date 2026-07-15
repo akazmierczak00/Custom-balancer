@@ -41,6 +41,7 @@ import {
   LobbyPlayer,
   LobbyStatus,
   LoLRank,
+  MatchResult,
   PlayerAssignment,
   SelectedWeakness,
   TeamProposal,
@@ -953,7 +954,7 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
       if (!userSnap.exists()) return;
 
       const data = userSnap.data() as UserProfile;
-      const matchHistory = [...data.matchHistory, "W"].slice(-10);
+      const matchHistory = [...data.matchHistory, "W" as MatchResult].slice(-10);
       updatedProfiles.set(player.uid, {
         ...data,
         wins: data.wins + 1,
@@ -970,7 +971,7 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
       if (!userSnap.exists()) return;
 
       const data = userSnap.data() as UserProfile;
-      const matchHistory = [...data.matchHistory, "L"].slice(-10);
+      const matchHistory = [...data.matchHistory, "L" as MatchResult].slice(-10);
       updatedProfiles.set(player.uid, {
         ...data,
         losses: data.losses + 1,
