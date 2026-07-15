@@ -140,7 +140,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
     <div className="space-y-3">
       <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-center gap-4 text-center">
         <h3 className="text-xl font-bold text-indigo-300">Team 1</h3>
-        <span className="text-2xl font-bold text-slate-500">VS</span>
+        <span aria-hidden="true" />
         <h3 className="text-xl font-bold text-purple-300">Team 2</h3>
       </div>
       {revealedRoles.map((role) => (

@@ -165,8 +165,8 @@ export function PlayerBanner({
       ) : (
         <div
           className={cn(
-            "mt-1 flex flex-wrap gap-0.5",
-            mirrored ? "flex-row-reverse justify-end" : "justify-start"
+            "mt-auto flex gap-0.5 pt-1",
+            mirrored ? "justify-end" : "justify-start"
           )}
         >
           {Array.from({ length: 10 }).map((_, i) => {
@@ -175,15 +175,13 @@ export function PlayerBanner({
               <span
                 key={i}
                 className={cn(
-                  "flex h-2.5 w-2.5 items-center justify-center rounded-[2px] text-[6px] font-bold leading-none",
-                  result === "W" && "bg-emerald-600 text-emerald-50",
-                  result === "L" && "bg-red-600 text-red-50",
-                  !result && "bg-slate-700/70 text-slate-600"
+                  "h-2.5 w-2.5 rounded-[2px]",
+                  result === "W" && "bg-emerald-600",
+                  result === "L" && "bg-red-600",
+                  !result && "bg-slate-700/70"
                 )}
-                title={result ?? "brak"}
-              >
-                {result ?? ""}
-              </span>
+                title={result === "W" ? "Wygrana" : result === "L" ? "Przegrana" : "Brak"}
+              />
             );
           })}
         </div>

@@ -203,15 +203,12 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       (item) => item.weaknessId === cell.weaknessId && item.tier === cell.tier
     );
 
-    try {
-      if (isSelected) {
-        await deselectWeakness(lobby.id, getWeaknessActingUid(), cell);
-      } else {
-        await selectWeakness(lobby.id, getWeaknessActingUid(), cell);
-      }
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Błąd wyboru");
+    if (isSelected) {
+      await deselectWeakness(lobby.id, getWeaknessActingUid(), cell);
+      return;
     }
+
+    await selectWeakness(lobby.id, getWeaknessActingUid(), cell);
   };
 
   const handleConfirmWeaknesses = async () => {

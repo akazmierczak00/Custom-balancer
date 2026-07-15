@@ -25,9 +25,7 @@ export function TeamOverview({ lobby, votes, compact = false }: TeamOverviewProp
         <h3 className={cn("font-bold text-indigo-300", compact ? "text-sm" : "text-xl")}>
           Team 1
         </h3>
-        <span className={cn("font-bold text-slate-500", compact ? "text-sm" : "text-2xl")}>
-          VS
-        </span>
+        <span aria-hidden="true" />
         <h3 className={cn("font-bold text-purple-300", compact ? "text-sm" : "text-xl")}>
           Team 2
         </h3>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getRevealIntensity, WEAKNESS_GRID_COLS } from "@/lib/algorithms/drawWeaknesses";
 import { LobbyWeaknesses } from "@/types";
@@ -9,7 +9,7 @@ interface WeaknessGridProps {
   weaknesses: LobbyWeaknesses;
   onRevealComplete?: () => void;
   selectable?: boolean;
-  onSelect?: (row: number, col: number) => void;
+  onSelect?: (row: number, col: number) => Promise<void>;
   currentUid?: string;
   actAsSelector?: boolean;
 }
@@ -22,6 +22,9 @@ export function WeaknessGrid({
   currentUid,
   actAsSelector = false,
 }: WeaknessGridProps) {
+  const [flashCell, setFlashCell] = useState<string | null>(null);
+  const [pointsError, setPointsError] = useState(false);
+
   const isSelector =
     !!weaknesses.selectorUid &&
     (weaknesses.selectorUid === currentUid || actAsSelector);
@@ -43,6 +46,27 @@ export function WeaknessGrid({
       onRevealComplete();
     }
   }, [weaknesses.revealIndex, weaknesses.drawn.length, onRevealComplete]);
+
+  const handleCellClick = async (rowIdx: number, colIdx: number) => {
+    if (!onSelect || !canSelect) return;
+
+    const cellKey = `${rowIdx}-${colIdx}`;
+
+    try {
+      await onSelect(rowIdx, colIdx);
+      setPointsError(false);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "";
+      if (message.includes("Za mało punktów")) {
+        setFlashCell(cellKey);
+        setPointsError(true);
+        window.setTimeout(() => setFlashCell(null), 500);
+        window.setTimeout(() => setPointsError(false), 2500);
+        return;
+      }
+      alert(message || "Błąd wyboru");
+    }
+  };
 
   if (weaknesses.confirmed) {
     return (
@@ -67,6 +91,11 @@ export function WeaknessGrid({
           </p>
         )}
       </div>
+      {pointsError && (
+        <p className="text-center text-sm font-semibold text-red-400">
+          Za mało punktów do wydania
+        </p>
+      )}
       <div className="space-y-3">
         {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) => (
           <div key={rowIdx} className="space-y-2">
@@ -79,21 +108,27 @@ export function WeaknessGrid({
                 if (!cell) return null;
 
                 const selected = isCellSelected(cell);
+                const cellKey = `${rowIdx}-${colIdx}`;
+                const isFlashing = flashCell === cellKey;
 
                 return (
                   <button
-                    key={`${rowIdx}-${colIdx}`}
+                    key={cellKey}
                     type="button"
                     disabled={!canSelect || !cell.revealed}
-                    onClick={() => onSelect?.(rowIdx, colIdx)}
+                    onClick={() => void handleCellClick(rowIdx, colIdx)}
                     className={cn(
                       "min-h-24 rounded-lg border border-slate-700 bg-slate-800/80 p-3 text-left transition-all",
                       !cell.revealed && "opacity-30",
-                      cell.revealed && getRevealIntensity(cell.rarity),
+                      cell.revealed && !isFlashing && getRevealIntensity(cell.rarity),
+                      isFlashing &&
+                        "border-red-500 bg-red-950/60 ring-2 ring-red-500/70",
                       selected &&
+                        !isFlashing &&
                         "border-amber-400/70 bg-amber-500/15 ring-2 ring-amber-400/50",
                       canSelect &&
                         cell.revealed &&
+                        !isFlashing &&
                         (selected
                           ? "hover:border-slate-400 hover:bg-slate-700/80"
                           : "hover:border-amber-400 hover:bg-amber-500/10")
