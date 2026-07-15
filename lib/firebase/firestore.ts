@@ -76,9 +76,17 @@ export function subscribeToCompletedLobbies(
   );
 
   return onSnapshot(q, (snap) => {
-    callback(
-      snap.docs.map((d) => normalizeLobby({ id: d.id, ...d.data() } as Lobby))
+    const lobbies = snap.docs.map((d) =>
+      normalizeLobby({ id: d.id, ...d.data() } as Lobby)
     );
+
+    lobbies.sort((a, b) => {
+      const aTime = a.updatedAt?.toMillis?.() ?? 0;
+      const bTime = b.updatedAt?.toMillis?.() ?? 0;
+      return bTime - aTime;
+    });
+
+    callback(lobbies);
   });
 }
 
