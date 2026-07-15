@@ -14,6 +14,7 @@ interface LobbyParticipantsProps {
   currentUid: string;
   isAdmin?: boolean;
   showConfirmActions?: boolean;
+  playersInRoom?: number;
 }
 
 export function LobbyParticipants({
@@ -21,6 +22,7 @@ export function LobbyParticipants({
   currentUid,
   isAdmin = false,
   showConfirmActions = false,
+  playersInRoom = 0,
 }: LobbyParticipantsProps) {
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(false);
@@ -63,8 +65,23 @@ export function LobbyParticipants({
     }
   };
 
+  const filledSlots = lobby.slots.filter(Boolean).length;
+  const isLobbyFull = filledSlots === 10;
+
   return (
     <div className="space-y-4">
+      {lobby.status === "open" && isLobbyFull && (
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-4 text-center">
+          <p className="font-semibold text-indigo-300">Lobby pełne — czekamy na graczy</p>
+          <p className="mt-2 text-slate-300">
+            W pokoju lobby: {playersInRoom}/10
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            Potwierdzenie udziału wystartuje, gdy wszyscy zapisani gracze wejdą do lobby.
+          </p>
+        </div>
+      )}
+
       {showConfirmActions && (
         <div className="rounded-xl border border-indigo-500/40 bg-indigo-950/20 p-6 text-center">
           <h2 className="text-xl font-bold text-indigo-300">
@@ -98,14 +115,26 @@ export function LobbyParticipants({
         </div>
       )}
 
+      {(lobby.status === "open" || lobby.status === "confirming") && (
+        <p className="text-center text-xs text-slate-400">
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />{" "}
+          Zielona ramka = gracz obecny w pokoju lobby
+        </p>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {lobby.slots.map((uid, index) => (
-          <PlayerBanner
-            key={`${index}-${uid ?? "empty"}`}
-            player={uid ? users[uid] : undefined}
-            isCurrentUser={uid === currentUid}
-          />
-        ))}
+        {lobby.slots.map((uid, index) => {
+          const isPresent = !!uid && (!!lobby.presentUids?.[uid] || isTestBotUid(uid));
+
+          return (
+            <PlayerBanner
+              key={`${index}-${uid ?? "empty"}`}
+              player={uid ? users[uid] : undefined}
+              isCurrentUser={uid === currentUid}
+              isPresent={isPresent}
+            />
+          );
+        })}
       </div>
     </div>
   );

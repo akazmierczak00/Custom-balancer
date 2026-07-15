@@ -78,11 +78,32 @@ function defaultVotes() {
   };
 }
 
+export function countPlayersInLobbyRoom(lobby: Lobby): number {
+  const slotUids = lobby.slots.filter(Boolean) as string[];
+  const presentUids = lobby.presentUids ?? {};
+
+  return slotUids.filter((uid) => presentUids[uid] || isTestBotUid(uid)).length;
+}
+
+function allPlayersInLobbyRoom(lobby: Lobby): boolean {
+  const filled = lobby.slots.filter(Boolean).length;
+  return filled === LOBBY_SIZE && countPlayersInLobbyRoom(lobby) === LOBBY_SIZE;
+}
+
+function confirmPhaseUpdates(): Record<string, unknown> {
+  return {
+    status: "confirming" as LobbyStatus,
+    acceptDeadline: Timestamp.fromMillis(Date.now() + CONFIRM_SECONDS * 1000),
+    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + CONFIRM_SECONDS * 1000),
+  };
+}
+
 export async function createLobby(adminUid: string): Promise<string> {
   const ref = await addDoc(collection(getFirebaseDb(), "lobbies"), {
     createdBy: adminUid,
     status: "open" as LobbyStatus,
     slots: emptySlots(),
+    presentUids: {},
     acceptances: {},
     acceptDeadline: null,
     team1: [],
@@ -117,24 +138,56 @@ export async function joinLobby(lobbyId: string, uid: string) {
     if (emptyIndex === -1) throw new Error("Lobby jest pełne");
 
     slots[emptyIndex] = uid;
-    const filled = slots.filter(Boolean).length;
 
-    const updates: Record<string, unknown> = {
+    tx.update(lobbyRef, {
       slots,
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function enterLobbyRoom(lobbyId: string, uid: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) return;
+
+    const lobby = snap.data() as Lobby;
+    if (!lobby.slots.includes(uid)) return;
+    if (lobby.status !== "open") return;
+
+    const presentUids = { ...(lobby.presentUids ?? {}), [uid]: true };
+    const nextLobby = { ...lobby, presentUids };
+    const updates: Record<string, unknown> = {
+      presentUids,
       updatedAt: serverTimestamp(),
     };
 
-    if (filled === LOBBY_SIZE) {
-      updates.status = "confirming";
-      updates.acceptDeadline = Timestamp.fromMillis(
-        Date.now() + CONFIRM_SECONDS * 1000
-      );
-      updates.phaseTimerEndsAt = Timestamp.fromMillis(
-        Date.now() + CONFIRM_SECONDS * 1000
-      );
+    if (allPlayersInLobbyRoom(nextLobby)) {
+      Object.assign(updates, confirmPhaseUpdates());
     }
 
     tx.update(lobbyRef, updates);
+  });
+}
+
+export async function exitLobbyRoom(lobbyId: string, uid: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) return;
+
+    const lobby = snap.data() as Lobby;
+    if (lobby.status !== "open") return;
+    if (!lobby.presentUids?.[uid]) return;
+
+    const presentUids = { ...lobby.presentUids };
+    delete presentUids[uid];
+
+    tx.update(lobbyRef, {
+      presentUids,
+      updatedAt: serverTimestamp(),
+    });
   });
 }
 
@@ -197,22 +250,11 @@ export async function fillLobbyWithTestBots(lobbyId: string) {
       }
     }
 
-    const filled = slots.filter(Boolean).length;
     const updates: Record<string, unknown> = {
       slots,
       acceptances,
       updatedAt: serverTimestamp(),
     };
-
-    if (filled === LOBBY_SIZE) {
-      updates.status = "confirming";
-      updates.acceptDeadline = Timestamp.fromMillis(
-        Date.now() + CONFIRM_SECONDS * 1000
-      );
-      updates.phaseTimerEndsAt = Timestamp.fromMillis(
-        Date.now() + CONFIRM_SECONDS * 1000
-      );
-    }
 
     tx.update(lobbyRef, updates);
   });
@@ -232,10 +274,13 @@ export async function leaveLobby(lobbyId: string, uid: string) {
     const slots = lobby.slots.map((s) => (s === uid ? null : s));
     const acceptances = { ...lobby.acceptances };
     delete acceptances[uid];
+    const presentUids = { ...(lobby.presentUids ?? {}) };
+    delete presentUids[uid];
 
     tx.update(lobbyRef, {
       slots,
       acceptances,
+      presentUids,
       status: "open",
       acceptDeadline: null,
       phaseTimerEndsAt: null,
@@ -249,6 +294,7 @@ export async function resetConfirmingLobby(lobbyId: string) {
   await updateDoc(lobbyRef, {
     status: "open",
     acceptances: {},
+    presentUids: {},
     acceptDeadline: null,
     phaseTimerEndsAt: null,
     updatedAt: serverTimestamp(),

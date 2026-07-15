@@ -47,7 +47,7 @@ service cloud.firestore {
         (
           resource.data.status == 'open' &&
           request.resource.data.status in ['open', 'confirming'] &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'acceptances', 'status', 'acceptDeadline', 'phaseTimerEndsAt', 'updatedAt'])
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'acceptances', 'status', 'acceptDeadline', 'phaseTimerEndsAt', 'presentUids', 'updatedAt'])
         ) ||
         (
           resource.data.status == 'confirming' &&

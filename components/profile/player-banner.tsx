@@ -13,6 +13,7 @@ interface PlayerBannerProps {
   voted?: boolean;
   isSelector?: boolean;
   isCurrentUser?: boolean;
+  isPresent?: boolean;
   mirrored?: boolean;
   compact?: boolean;
   className?: string;
@@ -46,6 +47,7 @@ export function PlayerBanner({
   voted,
   isSelector,
   isCurrentUser = false,
+  isPresent = false,
   mirrored = false,
   compact = false,
   className,
@@ -95,9 +97,11 @@ export function PlayerBanner({
   return (
     <div
       className={cn(
-        "flex h-full min-h-32 min-w-0 items-stretch gap-2",
+        "flex h-full min-h-32 min-w-0 items-stretch gap-2 rounded-lg",
         compact && "min-h-24 gap-1",
         mirrored ? "flex-row-reverse" : "flex-row",
+        isPresent &&
+          "ring-2 ring-emerald-400/80 shadow-[0_0_16px_rgba(52,211,153,0.35)]",
         className
       )}
     >

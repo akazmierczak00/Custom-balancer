@@ -69,6 +69,7 @@ export function normalizeTeamProposal(proposal: TeamProposal): TeamProposal {
 export function normalizeLobby(data: Lobby): Lobby {
   return {
     ...data,
+    presentUids: data.presentUids ?? {},
     team1: data.team1?.map(normalizePlayerAssignment) ?? [],
     team2: data.team2?.map(normalizePlayerAssignment) ?? [],
     proposalA: data.proposalA ? normalizeTeamProposal(data.proposalA) : null,

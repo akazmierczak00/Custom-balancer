@@ -127,6 +127,7 @@ export interface Lobby {
   createdBy: string;
   status: LobbyStatus;
   slots: (string | null)[];
+  presentUids?: Record<string, boolean>;
   acceptances: Record<string, boolean>;
   acceptDeadline: Timestamp | null;
   team1: PlayerAssignment[];

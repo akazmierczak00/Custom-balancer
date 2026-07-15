@@ -25,6 +25,9 @@ import {
   restartConfirmTimer,
   revealNextWeakness,
   selectWeakness,
+  enterLobbyRoom,
+  exitLobbyRoom,
+  countPlayersInLobbyRoom,
   startLineupVoting,
   startWeaknessReveal,
 } from "@/lib/lobby/service";
@@ -45,8 +48,18 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const [adminActingAsSelector, setAdminActingAsSelector] = useState(false);
 
   const isLobbyFull = lobby.slots.filter(Boolean).length === 10;
+  const playersInRoom = countPlayersInLobbyRoom(lobby);
   const showConfirmPopup =
     lobby.status === "confirming" && isLobbyFull && remaining > 0;
+
+  useEffect(() => {
+    if (!lobby.slots.includes(profile.uid)) return;
+
+    void enterLobbyRoom(lobby.id, profile.uid);
+    return () => {
+      void exitLobbyRoom(lobby.id, profile.uid);
+    };
+  }, [lobby.id, profile.uid, lobby.slots]);
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
     if (transitionLock.current) return;
@@ -273,6 +286,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           currentUid={profile.uid}
           isAdmin={isAdmin}
           showConfirmActions={showConfirmPopup}
+          playersInRoom={playersInRoom}
         />
       )}
 
