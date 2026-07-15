@@ -128,3 +128,48 @@ body {
   mix-blend-mode: screen;
   filter: drop-shadow(0 0 18px rgb(255 200 240 / 0.35));
 }
+
+[data-theme="y2k"] .lobby-tile-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: rgb(42 16 40 / 0.88);
+  border-color: rgb(255 120 200 / 0.35);
+}
+
+[data-theme="y2k"] .lobby-tile-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url(/brand/y2k-leopard-bg.png);
+  background-size: 220px;
+  background-repeat: repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme="y2k"] .lobby-tile-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme="y2k"] .lobby-tile-card-header {
+  background: linear-gradient(
+    180deg,
+    rgb(26 6 24 / 0.98) 0%,
+    rgb(42 16 40 / 0.96) 100%
+  );
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgb(255 148 210 / 0.35);
+  box-shadow: 0 6px 18px rgb(26 6 24 / 0.5);
+}
+
+[data-theme="y2k"] .lobby-tile-card-title {
+  color: #fff0fa;
+  text-shadow: 0 1px 10px rgb(26 6 24 / 0.85);
+}
+
+[data-theme="y2k"] .lobby-tile-card-subtitle {
+  color: #ffc8eb !important;
+}

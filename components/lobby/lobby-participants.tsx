@@ -100,7 +100,7 @@ export function LobbyParticipants({
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             {isJoined && (
               <Button onClick={handleAccept} disabled={loading || hasAccepted}>
-                {hasAccepted ? "Zaakceptowano" : "Akceptuj (ja)"}
+                {hasAccepted ? "Zaakceptowano" : "Akceptuj"}
               </Button>
             )}
             {isAdmin && (

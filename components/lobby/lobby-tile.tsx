@@ -75,11 +75,11 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="lobby-tile-card">
+      <CardHeader className="lobby-tile-card-header flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Lobby #{lobby.id.slice(0, 6)}</CardTitle>
-          <p className="text-sm text-slate-400">
+          <CardTitle className="lobby-tile-card-title">Lobby #{lobby.id.slice(0, 6)}</CardTitle>
+          <p className="lobby-tile-card-subtitle text-sm text-slate-400">
             {isCompleted
               ? `Zakończone · ${formatRoundCount(roundCount)}${playedDate ? ` · ${playedDate}` : ""}`
               : `Status: ${lobby.status} · ${filled}/10`}

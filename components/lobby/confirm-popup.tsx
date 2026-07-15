@@ -86,7 +86,7 @@ export function ConfirmPopup({
                 ? "Zapisz się, aby akceptować"
                 : hasAccepted
                   ? "Zaakceptowano"
-                  : "Akceptuj (ja)"}
+                  : "Akceptuj"}
             </Button>
             {isAdmin && (
               <Button
