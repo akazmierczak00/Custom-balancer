@@ -67,7 +67,7 @@ export default function UserProfilePage() {
             <Link href="/dashboard">Dashboard</Link>
           </Button>
           {isOwnProfile && (
-            <Button variant="ghost" onClick={() => logout()}>
+            <Button variant="outline" onClick={() => logout()}>
               Wyloguj
             </Button>
           )}

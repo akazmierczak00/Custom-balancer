@@ -46,7 +46,7 @@ export default function ProfilePage() {
           <Button variant="outline" asChild>
             <Link href="/dashboard">Dashboard</Link>
           </Button>
-          <Button variant="ghost" onClick={() => logout()}>
+          <Button variant="outline" onClick={() => logout()}>
             Wyloguj
           </Button>
         </div>
