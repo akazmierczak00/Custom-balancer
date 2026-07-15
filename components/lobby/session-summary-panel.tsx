@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamOverview } from "@/components/lobby/team-overview";
+import { formatRoundCount } from "@/lib/lobby/format";
 import { updateRoundMedia } from "@/lib/lobby/service";
 import { Lobby } from "@/types";
 
@@ -34,7 +35,7 @@ export function SessionSummaryPanel({ lobby, isAdmin }: SessionSummaryPanelProps
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Podsumowanie sesji</h2>
-        <p className="text-slate-400">{rounds.length} rund w tej sesji</p>
+        <p className="text-slate-400">{formatRoundCount(rounds.length)} w tej sesji</p>
       </div>
 
       <div className="grid gap-6">
