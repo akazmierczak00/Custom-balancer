@@ -181,6 +181,7 @@ export async function enterLobbyRoom(lobbyId: string, uid: string) {
     const lobby = snap.data() as Lobby;
     if (!lobby.slots.includes(uid)) return;
     if (lobby.status !== "open") return;
+    if (lobby.presentUids?.[uid]) return;
 
     const presentUids = { ...(lobby.presentUids ?? {}), [uid]: true };
     const nextLobby = { ...lobby, presentUids };

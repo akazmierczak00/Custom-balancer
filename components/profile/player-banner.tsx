@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, Sparkles } from "lucide-react";
+import { ArrowLeftRight, Circle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatRolePriorities, getRoleLabel } from "@/lib/constants/roles";
 import { isTestBotUid } from "@/lib/lobby/test-bots";
@@ -100,8 +100,6 @@ export function PlayerBanner({
         "flex h-full min-h-32 min-w-0 items-stretch gap-2 rounded-lg",
         compact && "min-h-24 gap-1",
         mirrored ? "flex-row-reverse" : "flex-row",
-        isPresent &&
-          "ring-2 ring-emerald-400/80 shadow-[0_0_16px_rgba(52,211,153,0.35)]",
         className
       )}
     >
@@ -141,6 +139,15 @@ export function PlayerBanner({
           )}
         </div>
         <div className="flex gap-1">
+          {isPresent && (
+            <Circle
+              className={cn(
+                "h-3.5 w-3.5 fill-emerald-400 text-emerald-400",
+                compact && "h-3 w-3"
+              )}
+              aria-label="Obecny w pokoju lobby"
+            />
+          )}
           {voted && <ArrowLeftRight className="h-4 w-4 text-emerald-400" />}
           {isSelector && <Sparkles className="h-4 w-4 text-amber-400" />}
         </div>
@@ -212,8 +219,8 @@ export function PlayerBanner({
           </span>
           <span
             className={cn(
-              "text-lg font-bold leading-none",
-              compact && "text-sm"
+              "text-sm font-bold leading-none tracking-tight",
+              compact && "text-xs"
             )}
           >
             {winRate}%

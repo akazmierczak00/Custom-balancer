@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlayerBanner } from "@/components/profile/player-banner";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
@@ -116,9 +117,9 @@ export function LobbyParticipants({
       )}
 
       {(lobby.status === "open" || lobby.status === "confirming") && (
-        <p className="text-center text-xs text-slate-400">
-          <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />{" "}
-          Zielona ramka = gracz obecny w pokoju lobby
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
+          <Circle className="h-3 w-3 fill-emerald-400 text-emerald-400" />
+          Zielona ikonka = gracz obecny w pokoju lobby
         </p>
       )}
 

@@ -59,7 +59,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     return () => {
       void exitLobbyRoom(lobby.id, profile.uid);
     };
-  }, [lobby.id, profile.uid, lobby.slots]);
+  }, [lobby.id, profile.uid]);
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
     if (transitionLock.current) return;
