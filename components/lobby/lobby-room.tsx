@@ -28,6 +28,7 @@ import {
   enterLobbyRoom,
   exitLobbyRoom,
   countPlayersInLobbyRoom,
+  tryStartConfirmPhase,
   startLineupVoting,
   startWeaknessReveal,
 } from "@/lib/lobby/service";
@@ -60,6 +61,11 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       void exitLobbyRoom(lobby.id, profile.uid);
     };
   }, [lobby.id, profile.uid]);
+
+  useEffect(() => {
+    if (lobby.status !== "open" || !isLobbyFull || playersInRoom < 10) return;
+    void tryStartConfirmPhase(lobby.id);
+  }, [lobby.status, lobby.id, isLobbyFull, playersInRoom]);
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
     if (transitionLock.current) return;

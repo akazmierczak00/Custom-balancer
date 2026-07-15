@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlayerBanner } from "@/components/profile/player-banner";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
@@ -71,7 +70,7 @@ export function LobbyParticipants({
 
   return (
     <div className="space-y-4">
-      {lobby.status === "open" && isLobbyFull && (
+      {lobby.status === "open" && isLobbyFull && playersInRoom < 10 && (
         <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-4 text-center">
           <p className="font-semibold text-indigo-300">Lobby pełne — czekamy na graczy</p>
           <p className="mt-2 text-slate-300">
@@ -80,6 +79,12 @@ export function LobbyParticipants({
           <p className="mt-1 text-sm text-slate-400">
             Potwierdzenie udziału wystartuje, gdy wszyscy zapisani gracze wejdą do lobby.
           </p>
+        </div>
+      )}
+
+      {lobby.status === "open" && isLobbyFull && playersInRoom === 10 && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-center">
+          <p className="font-semibold text-emerald-300">Wszyscy w pokoju — uruchamiamy potwierdzenie...</p>
         </div>
       )}
 
@@ -114,13 +119,6 @@ export function LobbyParticipants({
             </p>
           )}
         </div>
-      )}
-
-      {(lobby.status === "open" || lobby.status === "confirming") && (
-        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
-          <Circle className="h-3 w-3 fill-emerald-400 text-emerald-400" />
-          Zielona ikonka = gracz obecny w pokoju lobby
-        </p>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -99,6 +99,12 @@ function confirmPhaseUpdates(): Record<string, unknown> {
   };
 }
 
+function shouldStartConfirmPhase(lobby: Lobby, presentUids?: Record<string, boolean>) {
+  if (lobby.status !== "open") return false;
+  const nextLobby = presentUids ? { ...lobby, presentUids } : lobby;
+  return allPlayersInLobbyRoom(nextLobby);
+}
+
 async function refreshTeamAssignments(
   team: PlayerAssignment[]
 ): Promise<PlayerAssignment[]> {
@@ -181,20 +187,48 @@ export async function enterLobbyRoom(lobbyId: string, uid: string) {
     const lobby = snap.data() as Lobby;
     if (!lobby.slots.includes(uid)) return;
     if (lobby.status !== "open") return;
-    if (lobby.presentUids?.[uid]) return;
 
-    const presentUids = { ...(lobby.presentUids ?? {}), [uid]: true };
+    const alreadyPresent = !!lobby.presentUids?.[uid];
+    const presentUids = alreadyPresent
+      ? { ...(lobby.presentUids ?? {}) }
+      : { ...(lobby.presentUids ?? {}), [uid]: true };
     const nextLobby = { ...lobby, presentUids };
+
+    if (alreadyPresent) {
+      if (!shouldStartConfirmPhase(nextLobby)) return;
+      tx.update(lobbyRef, {
+        ...confirmPhaseUpdates(),
+        updatedAt: serverTimestamp(),
+      });
+      return;
+    }
+
     const updates: Record<string, unknown> = {
       presentUids,
       updatedAt: serverTimestamp(),
     };
 
-    if (allPlayersInLobbyRoom(nextLobby)) {
+    if (shouldStartConfirmPhase(nextLobby)) {
       Object.assign(updates, confirmPhaseUpdates());
     }
 
     tx.update(lobbyRef, updates);
+  });
+}
+
+export async function tryStartConfirmPhase(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) return;
+
+    const lobby = snap.data() as Lobby;
+    if (!shouldStartConfirmPhase(lobby)) return;
+
+    tx.update(lobbyRef, {
+      ...confirmPhaseUpdates(),
+      updatedAt: serverTimestamp(),
+    });
   });
 }
 
@@ -282,6 +316,11 @@ export async function fillLobbyWithTestBots(lobbyId: string) {
       acceptances,
       updatedAt: serverTimestamp(),
     };
+
+    const nextLobby = { ...lobby, slots };
+    if (shouldStartConfirmPhase(nextLobby)) {
+      Object.assign(updates, confirmPhaseUpdates());
+    }
 
     tx.update(lobbyRef, updates);
   });
