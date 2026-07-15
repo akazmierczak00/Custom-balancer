@@ -93,3 +93,23 @@ body {
     radial-gradient(circle at bottom left, rgb(255 120 200 / 0.1), transparent 40%),
     var(--background);
 }
+
+@keyframes y2k-sticker-float {
+  0%,
+  100% {
+    transform: rotate(var(--y2k-rotate, 0deg)) translateY(0);
+  }
+  50% {
+    transform: rotate(calc(var(--y2k-rotate, 0deg) + 4deg)) translateY(-10px);
+  }
+}
+
+[data-theme="y2k"] .y2k-sticker {
+  animation: y2k-sticker-float 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="y2k"] .y2k-sticker {
+    animation: none;
+  }
+}
