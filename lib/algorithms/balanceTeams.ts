@@ -135,6 +135,8 @@ export function assignRoles(
         nick: player.nick,
         rank: player.rank,
         role,
+        wins: player.wins,
+        losses: player.losses,
         rolePrioritiesLabel: formatRolePriorities(player.rolePriorities),
         matchHistory: player.matchHistory,
       });
