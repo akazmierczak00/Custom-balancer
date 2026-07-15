@@ -317,12 +317,6 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         <RoleReveal lobby={lobby} currentUid={profile.uid} />
       )}
 
-      {lobby.status === "reveal" && lobby.revealRoleIndex < 0 && isAdmin && (
-        <p className="text-center text-sm text-slate-400">
-          Oczekiwanie przed revealem Top lane...
-        </p>
-      )}
-
       {lobby.status === "reshuffle_reveal" && (
         <RoleReveal lobby={lobby} dual currentUid={profile.uid} />
       )}
