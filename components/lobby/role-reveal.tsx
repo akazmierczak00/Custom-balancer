@@ -16,26 +16,39 @@ interface RoleRevealRowProps {
   team1: PlayerAssignment[];
   team2: PlayerAssignment[];
   highlighted?: boolean;
+  compact?: boolean;
 }
 
-function RoleRevealRow({ role, team1, team2, highlighted }: RoleRevealRowProps) {
+function RoleRevealRow({ role, team1, team2, highlighted, compact }: RoleRevealRowProps) {
   const p1 = team1.find((p) => p.role === role);
   const p2 = team2.find((p) => p.role === role);
 
   return (
     <div
       className={cn(
-        "grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-stretch gap-4",
+        "grid min-w-0 items-stretch",
+        compact
+          ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
+          : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4",
         highlighted && "rounded-lg ring-2 ring-indigo-400/40"
       )}
     >
-      <PlayerBanner player={p1} role={role} mirrored className="h-full" />
+      <div className="min-w-0 overflow-hidden">
+        <PlayerBanner player={p1} role={role} mirrored compact={compact} className="h-full" />
+      </div>
       <div className="flex items-center justify-center">
-        <span className="text-center text-sm font-semibold text-slate-300">
+        <span
+          className={cn(
+            "text-center font-semibold text-slate-300",
+            compact ? "text-[10px] leading-tight" : "text-sm"
+          )}
+        >
           {getRoleLabel(role)}
         </span>
       </div>
-      <PlayerBanner player={p2} role={role} className="h-full" />
+      <div className="min-w-0 overflow-hidden">
+        <PlayerBanner player={p2} role={role} compact={compact} className="h-full" />
+      </div>
     </div>
   );
 }
@@ -48,6 +61,7 @@ interface ProposalRevealColumnProps {
   team2: PlayerAssignment[];
   revealedRoles: LoLRole[];
   currentRole: LoLRole;
+  compact?: boolean;
 }
 
 function ProposalRevealColumn({
@@ -58,11 +72,18 @@ function ProposalRevealColumn({
   team2,
   revealedRoles,
   currentRole,
+  compact = false,
 }: ProposalRevealColumnProps) {
   return (
-    <div className={cn("space-y-3 rounded-xl border p-4", borderClassName)}>
+    <div
+      className={cn(
+        "min-w-0 space-y-3 overflow-hidden rounded-xl border p-3",
+        compact && "p-2",
+        borderClassName
+      )}
+    >
       <p className={cn("text-center font-semibold", labelClassName)}>{label}</p>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {revealedRoles.map((role) => (
           <RoleRevealRow
             key={role}
@@ -70,6 +91,7 @@ function ProposalRevealColumn({
             team1={team1}
             team2={team2}
             highlighted={role === currentRole}
+            compact={compact}
           />
         ))}
       </div>
@@ -86,7 +108,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
 
   if (dual && lobby.proposalA && lobby.proposalB) {
     return (
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <ProposalRevealColumn
             label="Propozycja A"
             labelClassName="text-indigo-300"
@@ -95,6 +117,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
             team2={lobby.proposalA.team2}
             revealedRoles={revealedRoles}
             currentRole={currentRole}
+            compact
           />
         <ProposalRevealColumn
           label="Propozycja B"
@@ -104,6 +127,7 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
           team2={lobby.proposalB.team2}
           revealedRoles={revealedRoles}
           currentRole={currentRole}
+          compact
         />
       </div>
     );

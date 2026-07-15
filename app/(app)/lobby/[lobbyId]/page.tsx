@@ -15,6 +15,7 @@ export default function LobbyPage() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
   const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [lobbyLoaded, setLobbyLoaded] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -23,15 +24,41 @@ export default function LobbyPage() {
 
   useEffect(() => {
     if (!lobbyId) return;
-    return subscribeToLobby(lobbyId, setLobby);
+    setLobbyLoaded(false);
+    return subscribeToLobby(lobbyId, (next) => {
+      setLobby(next);
+      setLobbyLoaded(true);
+    });
   }, [lobbyId]);
+
+  useEffect(() => {
+    if (!lobbyLoaded || !profile || lobby) return;
+    if (profile.role !== "admin") {
+      router.replace("/dashboard");
+    }
+  }, [lobby, lobbyLoaded, profile, router]);
 
   if (loading || !profile) {
     return <div className="flex min-h-screen items-center justify-center">Ładowanie...</div>;
   }
 
+  if (!lobbyLoaded || (!lobby && profile.role !== "admin")) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-slate-400">
+        Przekierowanie...
+      </div>
+    );
+  }
+
   if (!lobby) {
-    return <div className="flex min-h-screen items-center justify-center">Lobby nie znalezione</div>;
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p>Lobby nie znalezione.</p>
+        <Button asChild>
+          <Link href="/dashboard">Wróć do listy lobby</Link>
+        </Button>
+      </div>
+    );
   }
 
   const isParticipant = lobby.slots.includes(profile.uid);

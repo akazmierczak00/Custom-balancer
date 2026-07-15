@@ -1,21 +1,36 @@
 "use client";
 
 import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
+import { cn } from "@/lib/utils";
 import { Lobby } from "@/types";
 import { PlayerBanner } from "@/components/profile/player-banner";
 
 interface TeamOverviewProps {
   lobby: Lobby;
   votes?: Record<string, string>;
+  compact?: boolean;
 }
 
-export function TeamOverview({ lobby, votes }: TeamOverviewProps) {
+export function TeamOverview({ lobby, votes, compact = false }: TeamOverviewProps) {
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-center gap-4 text-center">
-        <h3 className="text-xl font-bold text-indigo-300">Team 1</h3>
-        <span className="text-2xl font-bold text-slate-500">VS</span>
-        <h3 className="text-xl font-bold text-purple-300">Team 2</h3>
+    <div className="min-w-0 space-y-3">
+      <div
+        className={cn(
+          "grid min-w-0 items-center text-center",
+          compact
+            ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
+            : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4"
+        )}
+      >
+        <h3 className={cn("font-bold text-indigo-300", compact ? "text-sm" : "text-xl")}>
+          Team 1
+        </h3>
+        <span className={cn("font-bold text-slate-500", compact ? "text-sm" : "text-2xl")}>
+          VS
+        </span>
+        <h3 className={cn("font-bold text-purple-300", compact ? "text-sm" : "text-xl")}>
+          Team 2
+        </h3>
       </div>
 
       {REVEAL_ROLE_ORDER.map((role) => {
@@ -24,26 +39,42 @@ export function TeamOverview({ lobby, votes }: TeamOverviewProps) {
         return (
           <div
             key={role}
-            className="grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-stretch gap-4"
+            className={cn(
+              "grid min-w-0 items-stretch",
+              compact
+                ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
+                : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4"
+            )}
           >
-            <PlayerBanner
-              player={p1}
-              role={role}
-              voted={p1 ? !!votes?.[p1.uid] : false}
-              mirrored
-              className="h-full"
-            />
+            <div className="min-w-0 overflow-hidden">
+              <PlayerBanner
+                player={p1}
+                role={role}
+                voted={p1 ? !!votes?.[p1.uid] : false}
+                mirrored
+                compact={compact}
+                className="h-full"
+              />
+            </div>
             <div className="flex items-center justify-center">
-              <span className="text-center text-sm font-semibold text-slate-300">
+              <span
+                className={cn(
+                  "text-center font-semibold text-slate-300",
+                  compact ? "text-[10px] leading-tight" : "text-sm"
+                )}
+              >
                 {getRoleLabel(role)}
               </span>
             </div>
-            <PlayerBanner
-              player={p2}
-              role={role}
-              voted={p2 ? !!votes?.[p2.uid] : false}
-              className="h-full"
-            />
+            <div className="min-w-0 overflow-hidden">
+              <PlayerBanner
+                player={p2}
+                role={role}
+                voted={p2 ? !!votes?.[p2.uid] : false}
+                compact={compact}
+                className="h-full"
+              />
+            </div>
           </div>
         );
       })}

@@ -13,6 +13,7 @@ interface PlayerBannerProps {
   voted?: boolean;
   isSelector?: boolean;
   mirrored?: boolean;
+  compact?: boolean;
   className?: string;
 }
 
@@ -44,6 +45,7 @@ export function PlayerBanner({
   voted,
   isSelector,
   mirrored = false,
+  compact = false,
   className,
 }: PlayerBannerProps) {
   if (!player) {
@@ -91,14 +93,16 @@ export function PlayerBanner({
   return (
     <div
       className={cn(
-        "flex h-full min-h-32 items-stretch gap-2",
+        "flex h-full min-h-32 min-w-0 items-stretch gap-2",
+        compact && "min-h-24 gap-1",
         mirrored ? "flex-row-reverse" : "flex-row",
         className
       )}
     >
       <div
         className={cn(
-          "relative flex min-h-32 flex-1 flex-col rounded-lg border border-slate-700 bg-slate-800/80 p-4",
+          "relative flex min-h-32 min-w-0 flex-1 flex-col rounded-lg border border-slate-700 bg-slate-800/80 p-4",
+          compact && "min-h-24 p-2",
           isSelector && "ring-2 ring-amber-400"
         )}
       >
@@ -112,13 +116,20 @@ export function PlayerBanner({
           <p className="font-semibold text-slate-100">
             {nick}
             {isTestBot && (
-              <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+              <span
+                className={cn(
+                  "ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300",
+                  compact && "ml-1 px-1 py-0 text-[9px]"
+                )}
+              >
                 BOT
               </span>
             )}
           </p>
-          <p className="text-xs text-slate-400">{rankLabel}</p>
-          {rolePrioritiesLine && (
+          <p className={cn("text-xs text-slate-400", compact && "text-[10px]")}>
+            {rankLabel}
+          </p>
+          {rolePrioritiesLine && !compact && (
             <p className="mt-1 text-xs text-indigo-300">{rolePrioritiesLine}</p>
           )}
         </div>
@@ -127,41 +138,56 @@ export function PlayerBanner({
           {isSelector && <Sparkles className="h-4 w-4 text-amber-400" />}
         </div>
       </div>
-      <div
-        className={cn(
-          "mt-auto flex gap-1 pt-3",
-          mirrored ? "flex-row-reverse justify-start" : "justify-start"
-        )}
-      >
-        {Array.from({ length: 10 }).map((_, i) => {
-          const result = matchHistory[i];
-          return (
-            <span
-              key={i}
-              className={cn(
-                "flex h-6 w-6 items-center justify-center rounded text-xs font-bold",
-                result === "W" && "bg-emerald-600/30 text-emerald-300",
-                result === "L" && "bg-red-600/30 text-red-300",
-                !result && "bg-slate-700/50 text-slate-600"
-              )}
-            >
-              {result ?? "-"}
-            </span>
-          );
-        })}
-      </div>
+      {!compact && (
+        <div
+          className={cn(
+            "mt-auto flex gap-1 pt-3",
+            mirrored ? "flex-row-reverse justify-start" : "justify-start"
+          )}
+        >
+          {Array.from({ length: 10 }).map((_, i) => {
+            const result = matchHistory[i];
+            return (
+              <span
+                key={i}
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded text-xs font-bold",
+                  result === "W" && "bg-emerald-600/30 text-emerald-300",
+                  result === "L" && "bg-red-600/30 text-red-300",
+                  !result && "bg-slate-700/50 text-slate-600"
+                )}
+              >
+                {result ?? "-"}
+              </span>
+            );
+          })}
+        </div>
+      )}
       </div>
       {winRate !== null && (
         <div
           className={cn(
             "flex w-12 shrink-0 flex-col items-center justify-center rounded-lg border px-1 py-3 text-center",
+            compact && "w-9 px-0.5 py-2",
             getWinRateTone(winRate)
           )}
         >
-          <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">
+          <span
+            className={cn(
+              "text-[10px] font-semibold uppercase tracking-wide opacity-80",
+              compact && "text-[8px]"
+            )}
+          >
             WR
           </span>
-          <span className="text-lg font-bold leading-none">{winRate}%</span>
+          <span
+            className={cn(
+              "text-lg font-bold leading-none",
+              compact && "text-sm"
+            )}
+          >
+            {winRate}%
+          </span>
         </div>
       )}
     </div>
