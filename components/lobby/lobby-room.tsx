@@ -266,8 +266,9 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             </Button>
           )}
           {remaining > 0 &&
-            isAdmin &&
-            (lobby.status === "reveal" || lobby.status === "reshuffle_reveal") && (
+            ((lobby.status === "reveal" && lobby.revealRoleIndex < 0) ||
+              (isAdmin &&
+                (lobby.status === "reveal" || lobby.status === "reshuffle_reveal"))) && (
             <div className="text-right">
               <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
               {lobby.status === "reveal" && lobby.revealRoleIndex < 0 && (
