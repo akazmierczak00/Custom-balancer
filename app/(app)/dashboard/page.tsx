@@ -15,12 +15,16 @@ import {
 } from "@/lib/firebase/firestore";
 import { createLobby } from "@/lib/lobby/service";
 import { getRankLabel } from "@/lib/constants/ranks";
+import { CustomBalancerTitle } from "@/components/brand/custom-balancer-title";
+import { useTheme } from "@/components/providers/theme-provider";
 import { LobbyTile } from "@/components/lobby/lobby-tile";
 import { isTestBotUid } from "@/lib/lobby/test-bots";
+import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
+  const { theme, ready: themeReady } = useTheme();
   const router = useRouter();
   const [activeLobbies, setActiveLobbies] = useState<Lobby[]>([]);
   const [completedLobbies, setCompletedLobbies] = useState<Lobby[]>([]);
@@ -80,34 +84,45 @@ export default function DashboardPage() {
     return <div className="flex min-h-screen items-center justify-center">Ładowanie...</div>;
   }
 
+  const isY2kTheme = themeReady && theme === "y2k";
+
+  const headerButtons = (
+    <div className={cn("flex flex-wrap gap-2", isY2kTheme && "justify-center")}>
+      <Button variant="outline" asChild>
+        <Link href="/profile">Profil</Link>
+      </Button>
+      {profile.role === "admin" && (
+        <Button variant="outline" asChild>
+          <Link href="/admin/weaknesses">Osłabienia Adriana</Link>
+        </Button>
+      )}
+      {profile.role === "admin" && (
+        <Button onClick={handleCreateLobby} disabled={creating}>
+          {creating ? "Tworzenie..." : "Utwórz lobby"}
+        </Button>
+      )}
+      <Button variant="outline" onClick={() => logout()}>
+        Wyloguj
+      </Button>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Custom Balancer</h1>
-          <p className="text-slate-400">
-            Witaj, {profile.nick} ({profile.role})
-          </p>
+      {isY2kTheme ? (
+        <div className="flex flex-col items-center gap-4">
+          <CustomBalancerTitle />
+          {headerButtons}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/profile">Profil</Link>
-          </Button>
-          {profile.role === "admin" && (
-            <Button variant="outline" asChild>
-              <Link href="/admin/weaknesses">Osłabienia Adriana</Link>
-            </Button>
-          )}
-          {profile.role === "admin" && (
-            <Button onClick={handleCreateLobby} disabled={creating}>
-              {creating ? "Tworzenie..." : "Utwórz lobby"}
-            </Button>
-          )}
-          <Button variant="ghost" onClick={() => logout()}>
-            Wyloguj
-          </Button>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <CustomBalancerTitle />
+            <p className="text-slate-400">Cześć, {profile.nick}.</p>
+          </div>
+          {headerButtons}
         </div>
-      </div>
+      )}
 
       {profile.role === "admin" && (
         <div className="rounded-xl border border-slate-700">

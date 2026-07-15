@@ -113,3 +113,18 @@ body {
     animation: none;
   }
 }
+
+/* Y2K diamond WordArt logo image */
+.brand-title-logo {
+  display: block;
+  width: min(100%, 48rem);
+  margin-inline: auto;
+}
+
+.brand-title-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 18px rgb(255 200 240 / 0.35));
+}

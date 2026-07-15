@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Y2kBackgroundStickers } from "@/components/providers/y2k-background-stickers";
@@ -9,12 +9,30 @@ const STORAGE_KEY = "custom-balancer-theme";
 
 export type AppTheme = "default" | "y2k";
 
+const ThemeContext = createContext<{ theme: AppTheme; ready: boolean }>({
+  theme: "default",
+  ready: false,
+});
+
+export function useTheme() {
+  return useContext(ThemeContext);
+}
+
 function applyTheme(theme: AppTheme) {
   const root = document.documentElement;
   if (theme === "y2k") {
     root.setAttribute("data-theme", "y2k");
   } else {
     root.removeAttribute("data-theme");
+  }
+}
+
+function persistTheme(theme: AppTheme) {
+  localStorage.setItem(STORAGE_KEY, theme);
+  if (theme === "y2k") {
+    document.cookie = `${STORAGE_KEY}=y2k;path=/;max-age=31536000;SameSite=Lax`;
+  } else {
+    document.cookie = `${STORAGE_KEY}=;path=/;max-age=0;SameSite=Lax`;
   }
 }
 
@@ -26,6 +44,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem(STORAGE_KEY);
     const initial = saved === "y2k" ? "y2k" : "default";
     applyTheme(initial);
+    persistTheme(initial);
     setTheme(initial);
     setReady(true);
   }, []);
@@ -33,12 +52,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     const next: AppTheme = theme === "y2k" ? "default" : "y2k";
     applyTheme(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    persistTheme(next);
     setTheme(next);
   };
 
   return (
-    <>
+    <ThemeContext.Provider value={{ theme, ready }}>
       {theme === "y2k" && ready && <Y2kBackgroundStickers />}
       <div className="relative z-10">{children}</div>
       {ready && (
@@ -58,6 +77,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           <Sparkles className="h-4 w-4" />
         </button>
       )}
-    </>
+    </ThemeContext.Provider>
   );
 }
