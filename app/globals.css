@@ -42,46 +42,46 @@ body {
 
 /* Y2K pink palette — toggled via data-theme on <html> */
 [data-theme="y2k"] {
-  --background: #1a0618;
-  --foreground: #fff0fa;
-  --surface-page: #1a0618;
-  --surface-card: #2a1028;
-  --surface-header: #3d1a3a;
-  --surface-content: #301230;
-  --surface-panel: #4a1e4c;
-  --surface-nick: #5a2860;
-  --border-soft: #7a4080;
-  --border-accent: #c878b8;
-  --border-glow: #e878c8;
+  --background: #120816;
+  --foreground: #f8eef6;
+  --surface-page: #120816;
+  --surface-card: #1c1220;
+  --surface-header: #2a1a30;
+  --surface-content: #221628;
+  --surface-panel: #322038;
+  --surface-nick: #3d2848;
+  --border-soft: #6a4a70;
+  --border-accent: #b888b0;
+  --border-glow: #d8a0c8;
 
-  --color-slate-950: #1a0618;
-  --color-slate-900: #2a1028;
-  --color-slate-800: #3d1a3a;
-  --color-slate-700: #5a2860;
-  --color-slate-600: #7a4080;
-  --color-slate-500: #b87ab8;
-  --color-slate-400: #e8a8d8;
-  --color-slate-300: #ffc8eb;
-  --color-slate-200: #ffe0f4;
-  --color-slate-100: #fff0fa;
+  --color-slate-950: #120816;
+  --color-slate-900: #1c1220;
+  --color-slate-800: #2a1a30;
+  --color-slate-700: #3d2848;
+  --color-slate-600: #6a4a70;
+  --color-slate-500: #a888b0;
+  --color-slate-400: #d4b8d0;
+  --color-slate-300: #e8d0e4;
+  --color-slate-200: #f2e4f0;
+  --color-slate-100: #f8eef6;
 
-  --color-indigo-950: #3d0a32;
-  --color-indigo-600: #e91e8c;
-  --color-indigo-500: #ff2d9b;
-  --color-indigo-400: #ff5eb8;
-  --color-indigo-300: #ff85cc;
-  --color-indigo-100: #ffe0f4;
+  --color-indigo-950: #2a1430;
+  --color-indigo-600: #d64a98;
+  --color-indigo-500: #e860ac;
+  --color-indigo-400: #f078c0;
+  --color-indigo-300: #f49ad0;
+  --color-indigo-100: #f2e4f0;
 
-  --color-purple-950: #3a0f35;
-  --color-purple-500: #ff7ec8;
-  --color-purple-400: #ff94d2;
-  --color-purple-300: #ffa8dc;
+  --color-purple-950: #281430;
+  --color-purple-500: #d888c0;
+  --color-purple-400: #e0a0cc;
+  --color-purple-300: #e8b8d8;
 
-  --color-amber-950: #3a1535;
-  --color-amber-500: #ff8fd9;
-  --color-amber-400: #ffa6e3;
-  --color-amber-300: #ffc0eb;
-  --color-amber-200: #ffd6f5;
+  --color-amber-950: #2a1830;
+  --color-amber-500: #e098c8;
+  --color-amber-400: #e8b0d4;
+  --color-amber-300: #f0c8e4;
+  --color-amber-200: #f6dcf0;
 
   --color-emerald-950: #0f2828;
   --color-emerald-600: #2ee6b8;
@@ -89,27 +89,26 @@ body {
   --color-emerald-400: #6effe0;
   --color-emerald-300: #8bffe8;
 
-  --color-red-950: #2a0818;
-  --color-red-600: #ff3d7a;
-  --color-red-500: #ff5c8a;
-  --color-red-400: #ff7aa0;
-  --color-red-300: #ff9eb8;
+  --color-red-950: #241018;
+  --color-red-600: #e85078;
+  --color-red-500: #f06a90;
+  --color-red-400: #f488a8;
+  --color-red-300: #f8a8c0;
   --y2k-page-gradient:
-    radial-gradient(ellipse 90% 58% at 14% 6%, rgb(255 94 210 / 0.4) 0%, transparent 56%),
-    radial-gradient(ellipse 78% 52% at 86% 10%, rgb(255 45 155 / 0.34) 0%, transparent 54%),
-    radial-gradient(ellipse 88% 48% at 52% 96%, rgb(255 126 200 / 0.3) 0%, transparent 58%),
-    radial-gradient(ellipse 62% 44% at 8% 68%, rgb(255 148 210 / 0.26) 0%, transparent 50%),
-    radial-gradient(ellipse 58% 40% at 92% 62%, rgb(255 94 210 / 0.22) 0%, transparent 48%),
-    radial-gradient(ellipse 70% 55% at 50% 42%, rgb(255 200 235 / 0.12) 0%, transparent 62%),
+    radial-gradient(ellipse 90% 58% at 14% 6%, rgb(220 140 190 / 0.18) 0%, transparent 56%),
+    radial-gradient(ellipse 78% 52% at 86% 10%, rgb(190 110 170 / 0.14) 0%, transparent 54%),
+    radial-gradient(ellipse 88% 48% at 52% 96%, rgb(170 120 180 / 0.14) 0%, transparent 58%),
+    radial-gradient(ellipse 62% 44% at 8% 68%, rgb(160 130 180 / 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 58% 40% at 92% 62%, rgb(180 130 175 / 0.1) 0%, transparent 48%),
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgb(200 170 200 / 0.06) 0%, transparent 62%),
     linear-gradient(
       162deg,
-      #2a0830 0%,
-      #4a1248 14%,
-      #6a1a58 32%,
-      #8a2d78 48%,
-      #5c1a62 64%,
-      #4a1548 80%,
-      #2a0830 100%
+      #100814 0%,
+      #1a1020 18%,
+      #241828 38%,
+      #2c1c32 52%,
+      #221624 72%,
+      #141018 100%
     );
 }
 
@@ -144,10 +143,10 @@ body {
   position: relative;
   overflow: hidden;
   width: 100%;
-  border: 1px solid rgb(255 148 210 / 0.5);
+  border: 1px solid rgb(180 140 180 / 0.4);
   border-radius: 1rem;
   box-shadow: 0 8px 24px rgb(8 2 6 / 0.35);
-  background-color: #1a0618;
+  background-color: #120816;
 }
 
 .brand-title-dots {
@@ -191,12 +190,12 @@ body {
 }
 
 [data-theme="y2k"] .lobby-tile-card-title {
-  color: #fff0fa;
-  text-shadow: 0 0 14px rgb(255 120 200 / 0.2);
+  color: #f8eef6;
+  text-shadow: 0 0 14px rgb(180 120 170 / 0.15);
 }
 
 [data-theme="y2k"] .lobby-tile-card-subtitle {
-  color: #ffc8eb !important;
+  color: #d4b8d0 !important;
 }
 
 [data-theme="y2k"] .lobby-tile-card-content {
@@ -207,17 +206,17 @@ body {
 [data-theme="y2k"] .lobby-round-summary {
   background-color: var(--surface-panel) !important;
   border-color: var(--border-glow);
-  box-shadow: inset 0 1px 0 rgb(255 180 220 / 0.06);
+  box-shadow: inset 0 1px 0 rgb(200 170 200 / 0.06);
 }
 
 [data-theme="y2k"] .lobby-round-summary > p {
-  color: #fff0fa;
+  color: #f8eef6;
 }
 
 [data-theme="y2k"] .lobby-lineup-nick {
   background-color: var(--surface-nick) !important;
   border-color: var(--border-accent);
-  color: #fff8fc;
+  color: #f8eef6;
 }
 
 [data-theme="y2k"] .dashboard-panel {
@@ -250,9 +249,9 @@ body {
 }
 
 [data-theme="y2k"] .dashboard-section-title {
-  color: #ffc8eb;
+  color: #d4b8d0;
   letter-spacing: 0.02em;
-  text-shadow: 0 0 18px rgb(255 94 210 / 0.22);
+  text-shadow: 0 0 18px rgb(180 120 170 / 0.15);
 }
 
 [data-theme="y2k"] .dashboard-screen {
