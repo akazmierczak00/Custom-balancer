@@ -19,6 +19,7 @@ import { CustomBalancerTitle } from "@/components/brand/custom-balancer-title";
 import { useTheme } from "@/components/providers/theme-provider";
 import { LobbyTile } from "@/components/lobby/lobby-tile";
 import { DashboardY2kDecorations } from "@/components/dashboard/dashboard-y2k-decorations";
+import { useVisibleSubscription } from "@/hooks/use-visible-subscription";
 import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
@@ -39,27 +40,23 @@ export default function DashboardPage() {
     if (!loading && profile && !profile.profileComplete) router.replace("/profile");
   }, [user, profile, loading, router]);
 
-  useEffect(() => {
-    return subscribeToActiveLobbies(setActiveLobbies);
-  }, []);
+  useVisibleSubscription(() => subscribeToActiveLobbies(setActiveLobbies), []);
 
-  useEffect(() => {
-    return subscribeToCompletedLobbies(setCompletedLobbies);
-  }, []);
+  useVisibleSubscription(() => subscribeToCompletedLobbies(setCompletedLobbies), []);
 
   const allUids = useMemo(
     () => [...new Set(activeLobbies.flatMap((l) => l.slots.filter(Boolean) as string[]))],
     [activeLobbies]
   );
 
-  useEffect(() => {
-    return subscribeToUsers(allUids, setUsers);
-  }, [allUids]);
+  useVisibleSubscription(() => subscribeToUsers(allUids, setUsers), [allUids]);
 
-  useEffect(() => {
-    if (profile?.role !== "admin") return;
+  useVisibleSubscription(() => {
+    if (profile?.role !== "admin" || !usersOpen) {
+      return () => undefined;
+    }
     return subscribeToAllUsers(setAllUsers);
-  }, [profile?.role]);
+  }, [profile?.role, usersOpen]);
 
   const handleCreateLobby = async () => {
     if (!profile) return;

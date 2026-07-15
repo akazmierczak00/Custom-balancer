@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
+import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
 import { cn } from "@/lib/utils";
 import { Lobby, PlayerAssignment, UserProfile } from "@/types";
 import { TeamColumnLabel } from "@/components/lobby/team-column-label";
@@ -47,6 +48,7 @@ export function TeamOverview({
   const team1 = team1Override ?? lobby.team1;
   const team2 = team2Override ?? lobby.team2;
 
+  const lobbyUsers = useLobbyUsers();
   const [liveUsers, setLiveUsers] = useState<Record<string, UserProfile>>({});
 
   const playerUids = useMemo(
@@ -55,15 +57,19 @@ export function TeamOverview({
   );
 
   useEffect(() => {
-    if (!useLiveStats) {
-      setLiveUsers({});
+    if (!useLiveStats || lobbyUsers) {
+      if (!lobbyUsers) {
+        setLiveUsers({});
+      }
       return;
     }
     return subscribeToUsers(playerUids, setLiveUsers);
-  }, [playerUids, useLiveStats]);
+  }, [playerUids, useLiveStats, lobbyUsers]);
+
+  const resolvedLiveUsers = lobbyUsers ?? liveUsers;
 
   const resolvePlayer = (player: PlayerAssignment | undefined) =>
-    useLiveStats ? enrichPlayer(player, liveUsers) : player;
+    useLiveStats ? enrichPlayer(player, resolvedLiveUsers) : player;
 
   return (
     <div className="min-w-0 space-y-3">

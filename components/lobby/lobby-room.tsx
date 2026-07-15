@@ -11,6 +11,7 @@ import { TeamOverview } from "@/components/lobby/team-overview";
 import { LineupVotePanel } from "@/components/lobby/lineup-vote-panel";
 import { ProposalVotePanel } from "@/components/lobby/proposal-vote-panel";
 import { WeaknessGrid } from "@/components/lobby/weakness-grid";
+import { LobbyUsersProvider } from "@/components/lobby/lobby-users-context";
 import { PostGamePanel } from "@/components/lobby/post-game-panel";
 import { SessionSummaryPanel } from "@/components/lobby/session-summary-panel";
 import {
@@ -248,6 +249,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   };
 
   return (
+    <LobbyUsersProvider lobby={lobby}>
     <div className="mx-auto max-w-6xl space-y-8 p-4">
       <div className="flex items-center justify-between">
         <div>
@@ -414,5 +416,6 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
       <PostGamePanel lobby={lobby} isAdmin={isAdmin} />
     </div>
+    </LobbyUsersProvider>
   );
 }

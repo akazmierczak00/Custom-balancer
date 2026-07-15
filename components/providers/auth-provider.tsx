@@ -5,6 +5,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/config";
 import { ensureUserProfile } from "@/lib/firebase/auth";
 import { subscribeToUser } from "@/lib/firebase/firestore";
+import { useVisibleSubscription } from "@/hooks/use-visible-subscription";
 import { UserProfile } from "@/types";
 
 interface AuthContextValue {
@@ -39,8 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsub;
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
+  useVisibleSubscription(() => {
+    if (!user) return () => undefined;
     return subscribeToUser(user.uid, setProfile);
   }, [user]);
 

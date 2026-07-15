@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlayerBanner } from "@/components/profile/player-banner";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
+import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
 import { acceptLobby, acceptLobbyTestBots } from "@/lib/lobby/service";
 import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
@@ -24,6 +25,7 @@ export function LobbyParticipants({
   showConfirmActions = false,
   playersInRoom = 0,
 }: LobbyParticipantsProps) {
+  const lobbyUsers = useLobbyUsers();
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(false);
   const slotUids = useMemo(
@@ -32,8 +34,11 @@ export function LobbyParticipants({
   );
 
   useEffect(() => {
+    if (lobbyUsers) return;
     return subscribeToUsers(slotUids, setUsers);
-  }, [slotUids]);
+  }, [lobbyUsers, slotUids]);
+
+  const resolvedUsers = lobbyUsers ?? users;
 
   const remaining = usePhaseTimer(lobby.phaseTimerEndsAt);
   const acceptedCount = Object.values(lobby.acceptances).filter(Boolean).length;
@@ -128,7 +133,7 @@ export function LobbyParticipants({
           return (
             <PlayerBanner
               key={`${index}-${uid ?? "empty"}`}
-              player={uid ? users[uid] : undefined}
+              player={uid ? resolvedUsers[uid] : undefined}
               isCurrentUser={uid === currentUid}
               isPresent={isPresent}
             />
