@@ -47,10 +47,6 @@ export function PlayerBanner({
     ("uid" in player && isTestBotUid(player.uid));
 
   const rankLabel = rank ? getRankLabel(rank as never) : "Brak rangi";
-  const roleLabel = role ? getRoleLabel(role) : "";
-  const rankRoleLine = mirrored
-    ? [roleLabel, rankLabel].filter(Boolean).join(" · ")
-    : [rankLabel, roleLabel].filter(Boolean).join(" · ");
   const rolePrioritiesLine = rolePriorities
     ? mirrored
       ? [...rolePriorities]
@@ -85,7 +81,7 @@ export function PlayerBanner({
               </span>
             )}
           </p>
-          <p className="text-xs text-slate-400">{rankRoleLine}</p>
+          <p className="text-xs text-slate-400">{rankLabel}</p>
           {rolePrioritiesLine && (
             <p className="mt-1 text-xs text-indigo-300">{rolePrioritiesLine}</p>
           )}

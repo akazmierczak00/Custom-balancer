@@ -2,7 +2,6 @@
 
 import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
 import { cn } from "@/lib/utils";
-import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { Lobby, LoLRole, PlayerAssignment, TeamProposal } from "@/types";
 import { PlayerBanner } from "@/components/profile/player-banner";
 
@@ -82,15 +81,11 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
   const roleIndex = lobby.revealRoleIndex;
   const currentRole = REVEAL_ROLE_ORDER[roleIndex];
   const revealedRoles = REVEAL_ROLE_ORDER.slice(0, roleIndex + 1);
-  const remaining = usePhaseTimer(lobby.phaseTimerEndsAt);
 
   if (!currentRole) return null;
 
   const roleHeader = (
-    <div className="space-y-2 text-center">
-      {remaining > 0 && (
-        <p className="text-5xl font-bold text-indigo-400">{remaining}s</p>
-      )}
+    <div className="text-center">
       <h2 className="text-4xl font-bold text-indigo-300 md:text-5xl">
         {getRoleLabel(currentRole)}
       </h2>
