@@ -10,7 +10,7 @@ const STORAGE_KEY = "custom-balancer-theme";
 export type AppTheme = "default" | "y2k";
 
 const ThemeContext = createContext<{ theme: AppTheme; ready: boolean }>({
-  theme: "default",
+  theme: "y2k",
   ready: false,
 });
 
@@ -29,20 +29,17 @@ function applyTheme(theme: AppTheme) {
 
 function persistTheme(theme: AppTheme) {
   localStorage.setItem(STORAGE_KEY, theme);
-  if (theme === "y2k") {
-    document.cookie = `${STORAGE_KEY}=y2k;path=/;max-age=31536000;SameSite=Lax`;
-  } else {
-    document.cookie = `${STORAGE_KEY}=;path=/;max-age=0;SameSite=Lax`;
-  }
+  const maxAge = "31536000";
+  document.cookie = `${STORAGE_KEY}=${theme};path=/;max-age=${maxAge};SameSite=Lax`;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<AppTheme>("default");
+  const [theme, setTheme] = useState<AppTheme>("y2k");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const initial = saved === "y2k" ? "y2k" : "default";
+    const initial = saved === "default" ? "default" : "y2k";
     applyTheme(initial);
     persistTheme(initial);
     setTheme(initial);

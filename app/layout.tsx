@@ -35,7 +35,7 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const savedTheme = cookieStore.get(THEME_STORAGE_KEY)?.value;
-  const isY2kTheme = savedTheme === "y2k";
+  const isY2kTheme = savedTheme !== "default";
 
   return (
     <html
@@ -48,7 +48,7 @@ export default async function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              `(function(){try{var k='${THEME_STORAGE_KEY}';var t=localStorage.getItem(k);if(t==='y2k'){document.documentElement.setAttribute('data-theme','y2k');document.cookie=k+'=y2k;path=/;max-age=31536000;SameSite=Lax';}}catch(e){}})();`,
+              `(function(){try{var k='${THEME_STORAGE_KEY}';var t=localStorage.getItem(k);if(t==='default'){document.documentElement.removeAttribute('data-theme');document.cookie=k+'=default;path=/;max-age=31536000;SameSite=Lax';}else{document.documentElement.setAttribute('data-theme','y2k');document.cookie=k+'=y2k;path=/;max-age=31536000;SameSite=Lax';}}catch(e){}})();`,
           }}
         />
       </head>
