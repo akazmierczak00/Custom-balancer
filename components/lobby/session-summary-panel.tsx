@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamOverview } from "@/components/lobby/team-overview";
-import { TeamResultBadges } from "@/components/lobby/team-result-badges";
 import { updateRoundMedia } from "@/lib/lobby/service";
 import { Lobby } from "@/types";
 
@@ -35,7 +34,7 @@ export function SessionSummaryPanel({ lobby, isAdmin }: SessionSummaryPanelProps
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Podsumowanie sesji</h2>
-        <p className="text-slate-400">{rounds.length} rund w tym lobby</p>
+        <p className="text-slate-400">{rounds.length} rund w tej sesji</p>
       </div>
 
       <div className="grid gap-6">
@@ -78,18 +77,29 @@ function RoundSummaryCard({ lobby, round, isAdmin }: RoundSummaryCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-4">
-          <span>Runda {round.roundNumber}</span>
-          <TeamResultBadges winnerTeam={round.winnerTeam} />
-        </CardTitle>
+        <CardTitle>Runda {round.roundNumber}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <TeamOverview
           lobby={lobby}
           team1={round.team1}
           team2={round.team2}
+          winnerTeam={round.winnerTeam}
           compact
         />
+
+        {round.selectedWeaknesses.length > 0 && (
+          <div className="space-y-2 rounded-lg border border-amber-500/20 bg-amber-950/20 p-3">
+            <p className="text-sm font-semibold text-amber-300">Osłabienia Adriana</p>
+            <ul className="space-y-1">
+              {round.selectedWeaknesses.map((weakness) => (
+                <li key={`${weakness.weaknessId}-${weakness.tier}`} className="text-sm text-slate-200">
+                  Tier {weakness.tier}: <strong>{weakness.name}</strong> — {weakness.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="space-y-2">
           <p className="text-sm font-medium text-slate-300">POV na YouTube</p>

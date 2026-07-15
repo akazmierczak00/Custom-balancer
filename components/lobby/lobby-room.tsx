@@ -180,7 +180,8 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     lobby.status === "overview" && !lobby.votes?.locked && isAdmin;
 
   const showTeamOverview =
-    lobby.status === "overview" ||
+    lobby.status !== "session_summary" &&
+    (lobby.status === "overview" ||
     lobby.status === "voting_lineup" ||
     lobby.status === "locked_lineup" ||
     lobby.status === "weakness_reveal" ||
@@ -188,9 +189,10 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     lobby.status === "final" ||
     lobby.status === "playing" ||
     lobby.status === "post_game" ||
-    !!lobby.weaknesses?.confirmed;
+    !!lobby.weaknesses?.confirmed);
 
   const showWeaknessSection =
+    lobby.status !== "session_summary" &&
     (lobby.status === "weakness_reveal" ||
       lobby.status === "weakness_pick" ||
       lobby.weaknesses?.confirmed) &&

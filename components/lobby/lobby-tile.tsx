@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerBanner } from "@/components/profile/player-banner";
-import { TeamOverview } from "@/components/lobby/team-overview";
-import { TeamResultBadges } from "@/components/lobby/team-result-badges";
+import { RoundLineupCompact } from "@/components/lobby/round-lineup-compact";
 import { joinLobby, leaveLobby, fillLobbyWithTestBots, deleteLobby } from "@/lib/lobby/service";
 import { Lobby, UserProfile } from "@/types";
 
@@ -142,30 +141,14 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
                     key={round.roundNumber}
                     className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/30 p-4"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-semibold text-slate-200">
-                        Runda {round.roundNumber}
-                      </p>
-                      <TeamResultBadges winnerTeam={round.winnerTeam} />
-                    </div>
-                    <TeamOverview
-                      lobby={lobby}
+                    <p className="font-semibold text-slate-200">
+                      Runda {round.roundNumber}
+                    </p>
+                    <RoundLineupCompact
                       team1={round.team1}
                       team2={round.team2}
-                      compact
-                      currentUid={currentUser.uid}
+                      winnerTeam={round.winnerTeam}
                     />
-                    {round.youtubeUrl && (
-                      <a
-                        href={round.youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300"
-                      >
-                        POV na YouTube
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
                   </div>
                 ))}
               </div>

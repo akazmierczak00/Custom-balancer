@@ -5,6 +5,7 @@ import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
 import { cn } from "@/lib/utils";
 import { Lobby, PlayerAssignment, UserProfile } from "@/types";
+import { TeamColumnLabel } from "@/components/lobby/team-column-label";
 import { PlayerBanner } from "@/components/profile/player-banner";
 
 interface TeamOverviewProps {
@@ -14,6 +15,7 @@ interface TeamOverviewProps {
   votes?: Record<string, string>;
   compact?: boolean;
   currentUid?: string;
+  winnerTeam?: 1 | 2;
 }
 
 function enrichPlayer(
@@ -38,6 +40,7 @@ export function TeamOverview({
   votes,
   compact = false,
   currentUid,
+  winnerTeam,
 }: TeamOverviewProps) {
   const team1 = team1Override ?? lobby.team1;
   const team2 = team2Override ?? lobby.team2;
@@ -63,13 +66,9 @@ export function TeamOverview({
             : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4"
         )}
       >
-        <h3 className={cn("font-bold text-indigo-300", compact ? "text-sm" : "text-xl")}>
-          Team 1
-        </h3>
+        <TeamColumnLabel team={1} winnerTeam={winnerTeam} compact={compact} />
         <span aria-hidden="true" />
-        <h3 className={cn("font-bold text-purple-300", compact ? "text-sm" : "text-xl")}>
-          Team 2
-        </h3>
+        <TeamColumnLabel team={2} winnerTeam={winnerTeam} compact={compact} />
       </div>
 
       {REVEAL_ROLE_ORDER.map((role) => {
