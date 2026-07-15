@@ -31,7 +31,7 @@ service cloud.firestore {
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email', 'createdAt', 'rank'])
         )
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
     }
 
     match /weaknesses/{weaknessId} {

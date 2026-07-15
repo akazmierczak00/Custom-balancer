@@ -859,37 +859,43 @@ export async function startPlaying(lobbyId: string) {
 
 export async function setWinner(lobbyId: string, team: 1 | 2) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
-  const snap = await getDoc(lobbyRef);
-  if (!snap.exists()) return;
-
-  const lobby = snap.data() as Lobby;
-  const winners = team === 1 ? lobby.team1 : lobby.team2;
-  const losers = team === 1 ? lobby.team2 : lobby.team1;
 
   await runTransaction(getFirebaseDb(), async (tx) => {
-    for (const player of winners) {
-      const userRef = doc(getFirebaseDb(), "users", player.uid);
-      const userSnap = await tx.get(userRef);
-      if (!userSnap.exists()) continue;
-      const data = userSnap.data() as UserProfile;
-      const history = [...data.matchHistory, "W"].slice(-10);
-      tx.update(userRef, {
-        wins: data.wins + 1,
-        matchHistory: history,
-      });
-    }
+    const lobbySnap = await tx.get(lobbyRef);
+    if (!lobbySnap.exists()) return;
 
-    for (const player of losers) {
-      const userRef = doc(getFirebaseDb(), "users", player.uid);
-      const userSnap = await tx.get(userRef);
-      if (!userSnap.exists()) continue;
+    const lobby = lobbySnap.data() as Lobby;
+    const winners = team === 1 ? lobby.team1 : lobby.team2;
+    const losers = team === 1 ? lobby.team2 : lobby.team1;
+
+    const winnerSnaps = await Promise.all(
+      winners.map((player) => tx.get(doc(getFirebaseDb(), "users", player.uid)))
+    );
+    const loserSnaps = await Promise.all(
+      losers.map((player) => tx.get(doc(getFirebaseDb(), "users", player.uid)))
+    );
+
+    winners.forEach((player, index) => {
+      const userSnap = winnerSnaps[index];
+      if (!userSnap.exists()) return;
+
       const data = userSnap.data() as UserProfile;
-      const history = [...data.matchHistory, "L"].slice(-10);
-      tx.update(userRef, {
-        losses: data.losses + 1,
-        matchHistory: history,
+      tx.update(doc(getFirebaseDb(), "users", player.uid), {
+        wins: data.wins + 1,
+        matchHistory: [...data.matchHistory, "W"].slice(-10),
       });
-    }
+    });
+
+    losers.forEach((player, index) => {
+      const userSnap = loserSnaps[index];
+      if (!userSnap.exists()) return;
+
+      const data = userSnap.data() as UserProfile;
+      tx.update(doc(getFirebaseDb(), "users", player.uid), {
+        losses: data.losses + 1,
+        matchHistory: [...data.matchHistory, "L"].slice(-10),
+      });
+    });
 
     tx.update(lobbyRef, {
       status: "post_game",

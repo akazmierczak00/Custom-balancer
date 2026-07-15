@@ -63,7 +63,11 @@ export function ConfirmPopup({
 
   return (
     <Dialog open={open}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="sm:max-w-md"
+        showClose={false}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Lobby pełne — potwierdź udział</DialogTitle>
         </DialogHeader>

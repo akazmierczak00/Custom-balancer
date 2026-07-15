@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -7,14 +8,20 @@ import {
   User,
 } from "firebase/auth";
 import {
+  collection,
+  deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
+  where,
 } from "firebase/firestore";
 import { ADMIN_EMAILS, getFirebaseAuth, getFirebaseDb } from "@/lib/firebase/config";
 import { DEFAULT_ROLE_PRIORITIES } from "@/lib/constants/roles";
-import { UserProfile } from "@/types";
+import { leaveLobby } from "@/lib/lobby/service";
+import { Lobby, UserProfile } from "@/types";
 
 export async function registerWithEmail(email: string, password: string) {
   const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password);
@@ -37,6 +44,46 @@ export async function loginWithGoogle() {
 
 export async function logout() {
   await signOut(getFirebaseAuth());
+}
+
+export async function deleteAccount() {
+  const auth = getFirebaseAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error("Nie jesteś zalogowany");
+
+  const lobbiesSnap = await getDocs(
+    query(
+      collection(getFirebaseDb(), "lobbies"),
+      where("slots", "array-contains", user.uid)
+    )
+  );
+
+  for (const lobbyDoc of lobbiesSnap.docs) {
+    const lobby = lobbyDoc.data() as Lobby;
+    if (lobby.status !== "open" && lobby.status !== "confirming") {
+      throw new Error(
+        "Nie możesz usunąć konta, dopóki uczestniczysz w aktywnym lobby. Poczekaj na zakończenie gry."
+      );
+    }
+  }
+
+  for (const lobbyDoc of lobbiesSnap.docs) {
+    await leaveLobby(lobbyDoc.id, user.uid);
+  }
+
+  await deleteDoc(doc(getFirebaseDb(), "users", user.uid));
+
+  try {
+    await deleteUser(user);
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "auth/requires-recent-login") {
+      throw new Error(
+        "Ze względów bezpieczeństwa zaloguj się ponownie, a następnie usuń konto."
+      );
+    }
+    throw error;
+  }
 }
 
 export async function ensureUserProfile(user: User): Promise<UserProfile> {
