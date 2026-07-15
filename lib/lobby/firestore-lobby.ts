@@ -53,6 +53,7 @@ export function toFirestoreWeaknesses(weaknesses: LobbyWeaknesses): LobbyWeaknes
     confirmed: weaknesses.confirmed ?? false,
     revealIndex: weaknesses.revealIndex ?? 0,
     drawn: normalizeDrawnWeaknesses(weaknesses.drawn as never),
+    ...(weaknesses.championPool ? { championPool: weaknesses.championPool } : {}),
   };
 }
 

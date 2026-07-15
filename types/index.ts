@@ -120,6 +120,25 @@ export interface LobbyWeaknesses {
   selectorUid: string | null;
   confirmed: boolean;
   revealIndex: number;
+  championPool?: {
+    role: LoLRole;
+    patch: string;
+    appliedTiers: (1 | 2 | 3)[];
+    startingPool: {
+      id: string;
+      key: string;
+      name: string;
+      iconUrl: string;
+    }[];
+    removedChampionIds: string[];
+    remaining: {
+      id: string;
+      key: string;
+      name: string;
+      iconUrl: string;
+    }[];
+    revealedAt: number;
+  };
 }
 
 export interface LobbyRoundRecord {

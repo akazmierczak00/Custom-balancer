@@ -11,6 +11,10 @@ import { TeamOverview } from "@/components/lobby/team-overview";
 import { LineupVotePanel } from "@/components/lobby/lineup-vote-panel";
 import { ProposalVotePanel } from "@/components/lobby/proposal-vote-panel";
 import { WeaknessGrid } from "@/components/lobby/weakness-grid";
+import {
+  ChampionPoolReveal,
+  hasSeenChampionPoolReveal,
+} from "@/components/lobby/champion-pool-reveal";
 import { LobbyUsersProvider } from "@/components/lobby/lobby-users-context";
 import { PostGamePanel } from "@/components/lobby/post-game-panel";
 import { SessionSummaryPanel } from "@/components/lobby/session-summary-panel";
@@ -48,6 +52,23 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const weaknessRevealInFlight = useRef(false);
   const [weaknessLoading, setWeaknessLoading] = useState(false);
   const [adminActingAsSelector, setAdminActingAsSelector] = useState(false);
+  const [showChampionPoolReveal, setShowChampionPoolReveal] = useState(false);
+
+  const championPool = lobby.weaknesses?.championPool;
+
+  useEffect(() => {
+    if (lobby.status !== "final" || !championPool) {
+      setShowChampionPoolReveal(false);
+      return;
+    }
+
+    if (hasSeenChampionPoolReveal(lobby.id, championPool.revealedAt)) {
+      setShowChampionPoolReveal(false);
+      return;
+    }
+
+    setShowChampionPoolReveal(true);
+  }, [lobby.status, lobby.id, championPool]);
 
   const isLobbyFull = lobby.slots.filter(Boolean).length === 10;
   const playersInRoom = countPlayersInLobbyRoom(lobby);
@@ -250,6 +271,13 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
   return (
     <LobbyUsersProvider lobby={lobby}>
+    {showChampionPoolReveal && championPool && (
+      <ChampionPoolReveal
+        lobbyId={lobby.id}
+        championPool={championPool}
+        onComplete={() => setShowChampionPoolReveal(false)}
+      />
+    )}
     <div className="mx-auto max-w-6xl space-y-8 p-4">
       <div className="flex items-center justify-between">
         <div>

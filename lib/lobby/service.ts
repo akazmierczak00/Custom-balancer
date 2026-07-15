@@ -27,6 +27,12 @@ import {
 } from "@/lib/algorithms/drawWeaknesses";
 import { compareRanks } from "@/lib/constants/ranks";
 import {
+  computeChampionPoolSnapshot,
+  getAdrianRole,
+  getNarrowPoolTiers,
+} from "@/lib/champions/narrow-pool";
+import { ChampionCatalogEntry } from "@/lib/champions/types";
+import {
   toFirestoreProposal,
   toFirestoreTeam,
   toFirestoreWeaknesses,
@@ -949,28 +955,69 @@ export async function deselectWeakness(
   });
 }
 
+async function loadChampionCatalog(): Promise<{
+  patch: string;
+  champions: ChampionCatalogEntry[];
+}> {
+  const response = await fetch("/api/champions");
+  const data = (await response.json()) as {
+    patch?: string;
+    champions?: ChampionCatalogEntry[];
+    error?: string;
+  };
+
+  if (!response.ok || !data.champions || !data.patch) {
+    throw new Error(data.error ?? "Nie udało się załadować championów.");
+  }
+
+  return { patch: data.patch, champions: data.champions };
+}
+
 export async function confirmWeaknesses(lobbyId: string, uid: string) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
-  await runTransaction(getFirebaseDb(), async (tx) => {
-    const snap = await tx.get(lobbyRef);
-    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+  const lobbySnap = await getDoc(lobbyRef);
+  if (!lobbySnap.exists()) throw new Error("Lobby nie istnieje");
 
-    const lobby = snap.data() as Lobby;
-    if (lobby.weaknesses.selectorUid !== uid) {
-      throw new Error("Nie jesteś selektorem osłabień");
-    }
-    if (lobby.weaknesses.pointsSpent !== lobby.weaknesses.pointsTotal) {
-      throw new Error("Musisz wydać wszystkie punkty");
+  const lobby = { id: lobbySnap.id, ...lobbySnap.data() } as Lobby;
+  if (lobby.weaknesses.selectorUid !== uid) {
+    throw new Error("Nie jesteś selektorem osłabień");
+  }
+  if (lobby.weaknesses.pointsSpent !== lobby.weaknesses.pointsTotal) {
+    throw new Error("Musisz wydać wszystkie punkty");
+  }
+
+  const narrowPoolTiers = getNarrowPoolTiers(lobby.weaknesses.selected);
+  let championPool = lobby.weaknesses.championPool;
+
+  if (narrowPoolTiers.length > 0) {
+    const adrianRole = getAdrianRole(lobby);
+    if (!adrianRole) {
+      throw new Error("Nie znaleziono roli Adriana w składzie.");
     }
 
-    tx.update(lobbyRef, {
-      status: "final",
-      weaknesses: toFirestoreWeaknesses({
-        ...lobby.weaknesses,
-        confirmed: true,
-      }),
-      updatedAt: serverTimestamp(),
-    });
+    const catalog = await loadChampionCatalog();
+    championPool =
+      computeChampionPoolSnapshot(
+        catalog.champions,
+        catalog.patch,
+        adrianRole,
+        narrowPoolTiers,
+        lobbyId
+      ) ?? undefined;
+
+    if (!championPool) {
+      throw new Error("Brak championów dla roli Adriana.");
+    }
+  }
+
+  await updateDoc(lobbyRef, {
+    status: "final",
+    weaknesses: toFirestoreWeaknesses({
+      ...lobby.weaknesses,
+      confirmed: true,
+      ...(championPool ? { championPool } : {}),
+    }),
+    updatedAt: serverTimestamp(),
   });
 }
 

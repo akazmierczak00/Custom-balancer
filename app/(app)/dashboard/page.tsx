@@ -19,10 +19,13 @@ import { CustomBalancerTitle } from "@/components/brand/custom-balancer-title";
 import { useTheme } from "@/components/providers/theme-provider";
 import { LobbyTile } from "@/components/lobby/lobby-tile";
 import { DashboardY2kDecorations } from "@/components/dashboard/dashboard-y2k-decorations";
+import { DashboardChampionsPanel } from "@/components/dashboard/dashboard-champions-panel";
 import { useVisibleSubscription } from "@/hooks/use-visible-subscription";
 import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
+
+type DashboardTab = "lobby" | "champions";
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
@@ -34,6 +37,7 @@ export default function DashboardPage() {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [creating, setCreating] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("lobby");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -124,6 +128,27 @@ export default function DashboardPage() {
         </div>
       )}
 
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant={activeTab === "lobby" ? "default" : "outline"}
+          onClick={() => setActiveTab("lobby")}
+        >
+          Lobby
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "champions" ? "default" : "outline"}
+          onClick={() => setActiveTab("champions")}
+        >
+          Champions
+        </Button>
+      </div>
+
+      {activeTab === "champions" ? (
+        <DashboardChampionsPanel />
+      ) : (
+        <>
       {profile.role === "admin" && (
         <div className="dashboard-panel overflow-hidden rounded-xl border border-slate-700">
           <button
@@ -198,6 +223,8 @@ export default function DashboardPage() {
           ))
         )}
       </div>
+        </>
+      )}
       </div>
     </div>
   );

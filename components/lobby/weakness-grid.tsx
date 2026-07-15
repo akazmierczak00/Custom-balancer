@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getRevealIntensity, WEAKNESS_GRID_COLS } from "@/lib/algorithms/drawWeaknesses";
+import { isNarrowChampionPoolWeakness } from "@/lib/champions/narrow-pool";
+import { ChampionListCollapsible } from "@/components/lobby/champion-list-collapsible";
 import { LobbyWeaknesses } from "@/types";
 
 interface WeaknessGridProps {
@@ -69,6 +71,10 @@ export function WeaknessGrid({
   };
 
   if (weaknesses.confirmed) {
+    const hasNarrowChampionPool = weaknesses.selected.some((item) =>
+      isNarrowChampionPoolWeakness(item.name)
+    );
+
     return (
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-amber-300">Wybrane osłabienia Adriana</h3>
@@ -77,6 +83,9 @@ export function WeaknessGrid({
             Tier {s.tier}: <strong>{s.name}</strong> — {s.text}
           </p>
         ))}
+        {hasNarrowChampionPool && weaknesses.championPool && (
+          <ChampionListCollapsible championPool={weaknesses.championPool} />
+        )}
       </div>
     );
   }
