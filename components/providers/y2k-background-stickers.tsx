@@ -2,25 +2,6 @@
 
 import type { ReactNode } from "react";
 
-function StarBurst({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 80 80" className={className} aria-hidden>
-      <defs>
-        <linearGradient id="y2k-star" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ff9ed8" />
-          <stop offset="50%" stopColor="#ff2d9b" />
-          <stop offset="100%" stopColor="#c77dff" />
-        </linearGradient>
-      </defs>
-      <path
-        fill="url(#y2k-star)"
-        d="M40 4 48 30 76 30 52 46 60 72 40 56 20 72 28 46 4 30 32 30Z"
-      />
-      <circle cx="40" cy="40" r="6" fill="#fff0fa" opacity="0.9" />
-    </svg>
-  );
-}
-
 function Butterfly({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 90 70" className={className} aria-hidden>
@@ -96,40 +77,24 @@ function Flower({ className }: { className?: string }) {
   );
 }
 
-function Smiley({ className }: { className?: string }) {
+function Alien({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 72 72" className={className} aria-hidden>
-      <circle cx="36" cy="36" r="32" fill="#fff6b0" />
-      <circle cx="36" cy="36" r="32" fill="none" stroke="#ff2d9b" strokeWidth="3" />
-      <circle cx="26" cy="30" r="4" fill="#ff2d9b" />
-      <circle cx="46" cy="30" r="4" fill="#ff2d9b" />
+    <svg viewBox="0 0 72 80" className={className} aria-hidden>
+      <ellipse cx="36" cy="54" rx="26" ry="22" fill="#8dffb0" />
+      <ellipse cx="36" cy="30" rx="24" ry="28" fill="#6eff96" />
+      <ellipse cx="27" cy="28" rx="9" ry="13" fill="#1a0618" />
+      <ellipse cx="45" cy="28" rx="9" ry="13" fill="#1a0618" />
+      <ellipse cx="25" cy="25" rx="3" ry="4" fill="#fff0fa" opacity="0.75" />
+      <ellipse cx="43" cy="25" rx="3" ry="4" fill="#fff0fa" opacity="0.75" />
       <path
         fill="none"
-        stroke="#ff2d9b"
-        strokeWidth="3"
+        stroke="#2a8f4a"
+        strokeWidth="2"
         strokeLinecap="round"
-        d="M24 44 Q36 56 48 44"
+        d="M30 42 Q36 46 42 42"
       />
-    </svg>
-  );
-}
-
-function Y2KBadge({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 88 40" className={className} aria-hidden>
-      <rect x="2" y="4" width="84" height="32" rx="16" fill="#ff2d9b" />
-      <rect x="4" y="6" width="80" height="28" rx="14" fill="none" stroke="#fff0fa" strokeWidth="2" />
-      <text
-        x="44"
-        y="27"
-        textAnchor="middle"
-        fill="#fff0fa"
-        fontSize="16"
-        fontWeight="bold"
-        fontFamily="Arial, sans-serif"
-      >
-        Y2K
-      </text>
+      <ellipse cx="18" cy="58" rx="7" ry="5" fill="#6eff96" />
+      <ellipse cx="54" cy="58" rx="7" ry="5" fill="#6eff96" />
     </svg>
   );
 }
@@ -139,37 +104,188 @@ type StickerPlacement = {
   size: string;
   rotate: string;
   delay?: string;
+  offset?: string;
+  opacity?: number;
   sticker: ReactNode;
 };
 
 const LEFT_STICKERS: StickerPlacement[] = [
-  { top: "8%", size: "w-16 h-16", rotate: "-12deg", sticker: <StarBurst className="h-full w-full drop-shadow-[0_0_12px_rgb(255_45_155/0.35)]" /> },
-  { top: "28%", size: "w-20 h-20", rotate: "8deg", delay: "0.8s", sticker: <Butterfly className="h-full w-full drop-shadow-[0_0_10px_rgb(125_249_255/0.3)]" /> },
-  { top: "48%", size: "w-14 h-14", rotate: "-6deg", delay: "1.2s", sticker: <SparkleCluster className="h-full w-full" /> },
-  { top: "66%", size: "w-[4.5rem] h-[4.5rem]", rotate: "14deg", delay: "0.4s", sticker: <ChromeHeart className="h-full w-full drop-shadow-[0_0_14px_rgb(255_94_210/0.4)]" /> },
-  { top: "84%", size: "w-16 h-16", rotate: "-10deg", delay: "1.6s", sticker: <Flower className="h-full w-full" /> },
+  {
+    top: "4%",
+    size: "w-[4.2rem] h-[4.2rem]",
+    rotate: "-18deg",
+    offset: "6px",
+    sticker: <Butterfly className="h-full w-full drop-shadow-[0_0_10px_rgb(125_249_255/0.35)]" />,
+  },
+  {
+    top: "14%",
+    size: "w-12 h-12",
+    rotate: "11deg",
+    offset: "-10px",
+    delay: "0.3s",
+    opacity: 0.38,
+    sticker: <ChromeHeart className="h-full w-full drop-shadow-[0_0_12px_rgb(255_94_210/0.4)]" />,
+  },
+  {
+    top: "23%",
+    size: "w-[3.4rem] h-[3.8rem]",
+    rotate: "-7deg",
+    delay: "1.1s",
+    sticker: <Alien className="h-full w-full drop-shadow-[0_0_10px_rgb(110_255_150/0.35)]" />,
+  },
+  {
+    top: "36%",
+    size: "w-16 h-16",
+    rotate: "15deg",
+    offset: "12px",
+    delay: "0.7s",
+    sticker: <Flower className="h-full w-full" />,
+  },
+  {
+    top: "47%",
+    size: "w-[4.8rem] h-[3.8rem]",
+    rotate: "-12deg",
+    offset: "-6px",
+    delay: "1.5s",
+    sticker: <Butterfly className="h-full w-full drop-shadow-[0_0_10px_rgb(125_249_255/0.35)]" />,
+  },
+  {
+    top: "59%",
+    size: "w-14 h-14",
+    rotate: "6deg",
+    delay: "0.2s",
+    opacity: 0.42,
+    sticker: <ChromeHeart className="h-full w-full drop-shadow-[0_0_12px_rgb(255_94_210/0.4)]" />,
+  },
+  {
+    top: "68%",
+    size: "w-14 h-14",
+    rotate: "-9deg",
+    offset: "8px",
+    delay: "0.9s",
+    sticker: <Flower className="h-full w-full" />,
+  },
+  {
+    top: "76%",
+    size: "w-[3.6rem] h-[4rem]",
+    rotate: "13deg",
+    offset: "-12px",
+    delay: "1.8s",
+    sticker: <Alien className="h-full w-full drop-shadow-[0_0_10px_rgb(110_255_150/0.35)]" />,
+  },
+  {
+    top: "87%",
+    size: "w-[4rem] h-[3.2rem]",
+    rotate: "-5deg",
+    delay: "0.5s",
+    sticker: <Butterfly className="h-full w-full drop-shadow-[0_0_10px_rgb(125_249_255/0.35)]" />,
+  },
+  {
+    top: "93%",
+    size: "w-11 h-11",
+    rotate: "20deg",
+    offset: "4px",
+    delay: "1.3s",
+    opacity: 0.35,
+    sticker: <ChromeHeart className="h-full w-full drop-shadow-[0_0_12px_rgb(255_94_210/0.4)]" />,
+  },
 ];
 
 const RIGHT_STICKERS: StickerPlacement[] = [
-  { top: "12%", size: "w-[5.5rem] h-10", rotate: "6deg", sticker: <Y2KBadge className="h-full w-full drop-shadow-[0_0_10px_rgb(255_45_155/0.45)]" /> },
-  { top: "30%", size: "w-[4.5rem] h-[4.5rem]", rotate: "-8deg", delay: "0.6s", sticker: <Smiley className="h-full w-full" /> },
-  { top: "50%", size: "w-20 h-20", rotate: "10deg", delay: "1s", sticker: <StarBurst className="h-full w-full drop-shadow-[0_0_12px_rgb(255_45_155/0.35)]" /> },
-  { top: "68%", size: "w-16 h-16", rotate: "-14deg", delay: "1.4s", sticker: <Butterfly className="h-full w-full drop-shadow-[0_0_10px_rgb(125_249_255/0.3)]" /> },
-  { top: "86%", size: "w-14 h-14", rotate: "4deg", delay: "0.2s", sticker: <SparkleCluster className="h-full w-full" /> },
+  {
+    top: "7%",
+    size: "w-[3.5rem] h-[3.9rem]",
+    rotate: "9deg",
+    offset: "-8px",
+    sticker: <Alien className="h-full w-full drop-shadow-[0_0_10px_rgb(110_255_150/0.35)]" />,
+  },
+  {
+    top: "18%",
+    size: "w-[4.5rem] h-[3.5rem]",
+    rotate: "-14deg",
+    offset: "10px",
+    delay: "0.6s",
+    sticker: <Butterfly className="h-full w-full drop-shadow-[0_0_10px_rgb(125_249_255/0.35)]" />,
+  },
+  {
+    top: "29%",
+    size: "w-14 h-14",
+    rotate: "7deg",
+    delay: "1.2s",
+    sticker: <Flower className="h-full w-full" />,
+  },
+  {
+    top: "41%",
+    size: "w-12 h-12",
+    rotate: "-16deg",
+    offset: "-14px",
+    delay: "0.4s",
+    opacity: 0.4,
+    sticker: <ChromeHeart className="h-full w-full drop-shadow-[0_0_12px_rgb(255_94_210/0.4)]" />,
+  },
+  {
+    top: "52%",
+    size: "w-[3.2rem] h-[3.6rem]",
+    rotate: "12deg",
+    offset: "6px",
+    delay: "1.7s",
+    sticker: <Alien className="h-full w-full drop-shadow-[0_0_10px_rgb(110_255_150/0.35)]" />,
+  },
+  {
+    top: "61%",
+    size: "w-16 h-16",
+    rotate: "-8deg",
+    delay: "0.8s",
+    sticker: <Flower className="h-full w-full" />,
+  },
+  {
+    top: "72%",
+    size: "w-[4.6rem] h-[3.6rem]",
+    rotate: "17deg",
+    offset: "-6px",
+    delay: "1.4s",
+    sticker: <Butterfly className="h-full w-full drop-shadow-[0_0_10px_rgb(125_249_255/0.35)]" />,
+  },
+  {
+    top: "81%",
+    size: "w-[3.8rem] h-[3.8rem]",
+    rotate: "-11deg",
+    offset: "12px",
+    delay: "0.1s",
+    sticker: <ChromeHeart className="h-full w-full drop-shadow-[0_0_12px_rgb(255_94_210/0.4)]" />,
+  },
+  {
+    top: "89%",
+    size: "w-12 h-12",
+    rotate: "5deg",
+    delay: "2s",
+    opacity: 0.36,
+    sticker: <SparkleCluster className="h-full w-full" />,
+  },
+  {
+    top: "95%",
+    size: "w-[3.4rem] h-[3.8rem]",
+    rotate: "-19deg",
+    offset: "-10px",
+    delay: "1s",
+    sticker: <Alien className="h-full w-full drop-shadow-[0_0_10px_rgb(110_255_150/0.35)]" />,
+  },
 ];
 
 function StickerColumn({ side, items }: { side: "left" | "right"; items: StickerPlacement[] }) {
   return (
     <div
-      className={`pointer-events-none absolute top-0 ${side === "left" ? "left-2 xl:left-6" : "right-2 xl:right-6"} h-full w-20 xl:w-24`}
+      className={`pointer-events-none absolute top-0 ${side === "left" ? "left-1 xl:left-4" : "right-1 xl:right-4"} h-full w-24 xl:w-28`}
       aria-hidden
     >
       {items.map((item, index) => (
         <div
           key={`${side}-${index}`}
-          className={`y2k-sticker absolute ${item.size} opacity-45`}
+          className={`y2k-sticker absolute ${item.size}`}
           style={{
             top: item.top,
+            [side === "left" ? "left" : "right"]: item.offset ?? "0px",
+            opacity: item.opacity ?? 0.45,
             ["--y2k-rotate" as string]: item.rotate,
             animationDelay: item.delay ?? "0s",
           }}
