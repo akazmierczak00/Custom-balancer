@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerBanner } from "@/components/profile/player-banner";
+import { TeamOverview } from "@/components/lobby/team-overview";
+import { TeamResultBadges } from "@/components/lobby/team-result-badges";
 import { joinLobby, leaveLobby, fillLobbyWithTestBots, deleteLobby } from "@/lib/lobby/service";
 import { Lobby, UserProfile } from "@/types";
 
@@ -21,6 +23,8 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
   const filled = lobby.slots.filter(Boolean).length;
   const isJoined = lobby.slots.includes(currentUser.uid);
   const isAdmin = currentUser.role === "admin";
+  const isCompleted = lobby.status === "session_summary";
+  const roundCount = lobby.roundHistory?.length ?? 0;
 
   const handleJoin = async () => {
     setLoading(true);
@@ -75,11 +79,13 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
         <div>
           <CardTitle>Lobby #{lobby.id.slice(0, 6)}</CardTitle>
           <p className="text-sm text-slate-400">
-            Status: {lobby.status} · {filled}/10
+            {isCompleted
+              ? `Zakończone · ${roundCount} ${roundCount === 1 ? "runda" : "rund"}`
+              : `Status: ${lobby.status} · ${filled}/10`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {lobby.status === "open" && isAdmin && filled < 10 && (
+          {!isCompleted && lobby.status === "open" && isAdmin && filled < 10 && (
             <Button
               size="sm"
               variant="outline"
@@ -89,17 +95,17 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
               Wypełnij botami (test)
             </Button>
           )}
-          {lobby.status === "open" && !isJoined && (
+          {!isCompleted && lobby.status === "open" && !isJoined && (
             <Button size="sm" onClick={handleJoin} disabled={loading}>
               Zapisz się
             </Button>
           )}
-          {isJoined && (
+          {(isJoined || isCompleted) && (
             <Button size="sm" variant="secondary" asChild>
-              <a href={`/lobby/${lobby.id}`}>Wejdź</a>
+              <a href={`/lobby/${lobby.id}`}>{isCompleted ? "Podsumowanie" : "Wejdź"}</a>
             </Button>
           )}
-          {lobby.status === "open" && isJoined && (
+          {!isCompleted && lobby.status === "open" && isJoined && (
             <Button size="sm" variant="outline" onClick={handleLeave} disabled={loading}>
               Wypisz się
             </Button>
@@ -126,43 +132,53 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
 
       {expanded && (
         <CardContent className="space-y-4">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {lobby.slots.map((uid, i) => (
-              <PlayerBanner
-                key={i}
-                player={uid ? users[uid] : undefined}
-                isCurrentUser={uid === currentUser.uid}
-              />
-            ))}
-          </div>
-
-          {lobby.roundHistory?.length > 0 && (
-            <div className="space-y-3 border-t border-slate-700 pt-4">
-              <h3 className="text-sm font-semibold text-slate-300">
-                Historia rund ({lobby.roundHistory.length})
-              </h3>
-              <div className="grid gap-3 sm:grid-cols-2">
+          {isCompleted ? (
+            roundCount === 0 ? (
+              <p className="text-sm text-slate-400">Brak zapisanych rund.</p>
+            ) : (
+              <div className="space-y-6">
                 {lobby.roundHistory.map((round) => (
                   <div
                     key={round.roundNumber}
-                    className="rounded-lg border border-slate-700 bg-slate-900/40 p-3"
+                    className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/30 p-4"
                   >
-                    <p className="text-sm font-medium">
-                      Runda {round.roundNumber} — Team {round.winnerTeam} wygrywa
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="font-semibold text-slate-200">
+                        Runda {round.roundNumber}
+                      </p>
+                      <TeamResultBadges winnerTeam={round.winnerTeam} />
+                    </div>
+                    <TeamOverview
+                      lobby={lobby}
+                      team1={round.team1}
+                      team2={round.team2}
+                      compact
+                      currentUid={currentUser.uid}
+                    />
                     {round.youtubeUrl && (
                       <a
                         href={round.youtubeUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-block text-xs text-indigo-400 hover:text-indigo-300"
+                        className="inline-flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300"
                       >
                         POV na YouTube
+                        <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
                   </div>
                 ))}
               </div>
+            )
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {lobby.slots.map((uid, i) => (
+                <PlayerBanner
+                  key={i}
+                  player={uid ? users[uid] : undefined}
+                  isCurrentUser={uid === currentUser.uid}
+                />
+              ))}
             </div>
           )}
         </CardContent>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamOverview } from "@/components/lobby/team-overview";
+import { TeamResultBadges } from "@/components/lobby/team-result-badges";
 import { updateRoundMedia } from "@/lib/lobby/service";
 import { Lobby } from "@/types";
 
@@ -74,19 +75,12 @@ function RoundSummaryCard({ lobby, round, isAdmin }: RoundSummaryCardProps) {
     }
   };
 
-  const loserTeam = round.winnerTeam === 1 ? 2 : 1;
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-3">
+        <CardTitle className="flex flex-wrap items-center gap-4">
           <span>Runda {round.roundNumber}</span>
-          <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-medium text-emerald-300">
-            Team {round.winnerTeam} — wygrana
-          </span>
-          <span className="rounded-full bg-red-500/20 px-3 py-1 text-sm font-medium text-red-300">
-            Team {loserTeam} — przegrana
-          </span>
+          <TeamResultBadges winnerTeam={round.winnerTeam} />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

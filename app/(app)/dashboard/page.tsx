@@ -9,6 +9,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { logout } from "@/lib/firebase/auth";
 import {
   subscribeToActiveLobbies,
+  subscribeToCompletedLobbies,
   subscribeToAllUsers,
   subscribeToUsers,
 } from "@/lib/firebase/firestore";
@@ -21,7 +22,8 @@ import { Lobby, UserProfile } from "@/types";
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
-  const [lobbies, setLobbies] = useState<Lobby[]>([]);
+  const [activeLobbies, setActiveLobbies] = useState<Lobby[]>([]);
+  const [completedLobbies, setCompletedLobbies] = useState<Lobby[]>([]);
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [creating, setCreating] = useState(false);
@@ -33,12 +35,16 @@ export default function DashboardPage() {
   }, [user, profile, loading, router]);
 
   useEffect(() => {
-    return subscribeToActiveLobbies(setLobbies);
+    return subscribeToActiveLobbies(setActiveLobbies);
+  }, []);
+
+  useEffect(() => {
+    return subscribeToCompletedLobbies(setCompletedLobbies);
   }, []);
 
   const allUids = useMemo(
-    () => [...new Set(lobbies.flatMap((l) => l.slots.filter(Boolean) as string[]))],
-    [lobbies]
+    () => [...new Set(activeLobbies.flatMap((l) => l.slots.filter(Boolean) as string[]))],
+    [activeLobbies]
   );
 
   useEffect(() => {
@@ -148,10 +154,26 @@ export default function DashboardPage() {
 
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Aktywne lobby</h2>
-        {lobbies.length === 0 ? (
+        {activeLobbies.length === 0 ? (
           <p className="text-slate-400">Brak aktywnych lobby.</p>
         ) : (
-          lobbies.map((lobby) => (
+          activeLobbies.map((lobby) => (
+            <LobbyTile
+              key={lobby.id}
+              lobby={lobby}
+              currentUser={profile}
+              users={users}
+            />
+          ))
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Zakończone lobby</h2>
+        {completedLobbies.length === 0 ? (
+          <p className="text-slate-400">Brak zakończonych lobby.</p>
+        ) : (
+          completedLobbies.map((lobby) => (
             <LobbyTile
               key={lobby.id}
               lobby={lobby}

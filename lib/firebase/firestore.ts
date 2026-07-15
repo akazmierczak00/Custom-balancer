@@ -57,8 +57,22 @@ export function subscribeToActiveLobbies(
       "final",
       "playing",
       "post_game",
-      "session_summary",
     ])
+  );
+
+  return onSnapshot(q, (snap) => {
+    callback(
+      snap.docs.map((d) => normalizeLobby({ id: d.id, ...d.data() } as Lobby))
+    );
+  });
+}
+
+export function subscribeToCompletedLobbies(
+  callback: (lobbies: Lobby[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(getFirebaseDb(), "lobbies"),
+    where("status", "in", ["session_summary"])
   );
 
   return onSnapshot(q, (snap) => {
