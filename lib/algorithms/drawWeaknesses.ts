@@ -85,6 +85,8 @@ export function normalizeDrawnWeaknesses(
 export function getWeaknessCellIndex(row: number, col: number): number {
   return row * WEAKNESS_GRID_COLS + col;
 }
+
+export function getRevealDelay(rarity: number): number {
   return Math.max(300, (101 - rarity) * 80);
 }
 
