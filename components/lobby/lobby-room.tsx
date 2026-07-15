@@ -22,6 +22,7 @@ import {
   resolveLineupVote,
   resolveProposalVote,
   restartAfterCooldown,
+  restartConfirmTimer,
   revealNextWeakness,
   selectWeakness,
   startLineupVoting,
@@ -42,6 +43,10 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const weaknessRevealInFlight = useRef(false);
   const [weaknessLoading, setWeaknessLoading] = useState(false);
   const [adminActingAsSelector, setAdminActingAsSelector] = useState(false);
+
+  const isLobbyFull = lobby.slots.filter(Boolean).length === 10;
+  const showConfirmPopup =
+    lobby.status === "confirming" && isLobbyFull && remaining > 0;
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
     if (transitionLock.current) return;
@@ -259,7 +264,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         lobby={lobby}
         currentUid={profile.uid}
         isAdmin={isAdmin}
-        open={lobby.status === "confirming"}
+        open={showConfirmPopup}
       />
 
       {(lobby.status === "open" || lobby.status === "confirming" || lobby.status === "drafting") && (
@@ -267,7 +272,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           lobby={lobby}
           currentUid={profile.uid}
           isAdmin={isAdmin}
-          showConfirmActions={lobby.status === "confirming"}
+          showConfirmActions={showConfirmPopup}
         />
       )}
 
@@ -275,15 +280,26 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         <p className="text-center text-slate-400">Losowanie składów...</p>
       )}
 
-      {lobby.status === "reveal" && <RoleReveal lobby={lobby} />}
+      {isAdmin && isLobbyFull && lobby.status === "confirming" && remaining === 0 && (
+        <div className="flex justify-center">
+          <Button onClick={() => restartConfirmTimer(lobby.id)}>
+            Uruchom ponownie timer akceptacji
+          </Button>
+        </div>
+      )}
+
+      {lobby.status === "reveal" && (
+        <RoleReveal lobby={lobby} currentUid={profile.uid} />
+      )}
 
       {lobby.status === "reshuffle_reveal" && (
-        <RoleReveal lobby={lobby} dual />
+        <RoleReveal lobby={lobby} dual currentUid={profile.uid} />
       )}
 
       {showTeamOverview && (
         <TeamOverview
           lobby={lobby}
+          currentUid={profile.uid}
           votes={
             lobby.status === "voting_lineup" || lobby.status === "locked_lineup"
               ? lobby.votes.lineup

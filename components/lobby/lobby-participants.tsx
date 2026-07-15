@@ -103,6 +103,7 @@ export function LobbyParticipants({
           <PlayerBanner
             key={`${index}-${uid ?? "empty"}`}
             player={uid ? users[uid] : undefined}
+            isCurrentUser={uid === currentUid}
           />
         ))}
       </div>

@@ -315,6 +315,25 @@ export async function acceptLobbyTestBots(lobbyId: string) {
   });
 }
 
+export async function restartConfirmTimer(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+  const filled = lobby.slots.filter(Boolean).length;
+  if (filled !== LOBBY_SIZE) {
+    throw new Error("Lobby musi mieć 10 graczy, aby uruchomić akceptację");
+  }
+
+  await updateDoc(lobbyRef, {
+    status: "confirming",
+    acceptDeadline: Timestamp.fromMillis(Date.now() + CONFIRM_SECONDS * 1000),
+    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + CONFIRM_SECONDS * 1000),
+    updatedAt: serverTimestamp(),
+  });
+}
+
 async function fetchLobbyPlayers(uids: string[]): Promise<LobbyPlayer[]> {
   const players: LobbyPlayer[] = [];
   for (const uid of uids) {

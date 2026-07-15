@@ -12,6 +12,7 @@ interface PlayerBannerProps {
   role?: LoLRole;
   voted?: boolean;
   isSelector?: boolean;
+  isCurrentUser?: boolean;
   mirrored?: boolean;
   compact?: boolean;
   className?: string;
@@ -44,6 +45,7 @@ export function PlayerBanner({
   role,
   voted,
   isSelector,
+  isCurrentUser = false,
   mirrored = false,
   compact = false,
   className,
@@ -103,6 +105,7 @@ export function PlayerBanner({
         className={cn(
           "relative flex min-h-32 min-w-0 flex-1 flex-col rounded-lg border border-slate-700 bg-slate-800/80 p-4",
           compact && "min-h-24 p-2",
+          isCurrentUser && "bg-indigo-950/40 ring-2 ring-indigo-400/45",
           isSelector && "ring-2 ring-amber-400"
         )}
       >
@@ -166,7 +169,7 @@ export function PlayerBanner({
         <div
           className={cn(
             "mt-auto flex gap-0.5 pt-1",
-            mirrored ? "justify-end" : "justify-start"
+            mirrored ? "flex-row-reverse justify-start" : "justify-start"
           )}
         >
           {Array.from({ length: 10 }).map((_, i) => {

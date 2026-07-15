@@ -9,9 +9,15 @@ interface TeamOverviewProps {
   lobby: Lobby;
   votes?: Record<string, string>;
   compact?: boolean;
+  currentUid?: string;
 }
 
-export function TeamOverview({ lobby, votes, compact = false }: TeamOverviewProps) {
+export function TeamOverview({
+  lobby,
+  votes,
+  compact = false,
+  currentUid,
+}: TeamOverviewProps) {
   return (
     <div className="min-w-0 space-y-3">
       <div
@@ -49,6 +55,7 @@ export function TeamOverview({ lobby, votes, compact = false }: TeamOverviewProp
                 player={p1}
                 role={role}
                 voted={p1 ? !!votes?.[p1.uid] : false}
+                isCurrentUser={p1?.uid === currentUid}
                 mirrored
                 compact={compact}
                 className="h-full"
@@ -69,6 +76,7 @@ export function TeamOverview({ lobby, votes, compact = false }: TeamOverviewProp
                 player={p2}
                 role={role}
                 voted={p2 ? !!votes?.[p2.uid] : false}
+                isCurrentUser={p2?.uid === currentUid}
                 compact={compact}
                 className="h-full"
               />

@@ -130,6 +130,7 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
             <PlayerBanner
               key={i}
               player={uid ? users[uid] : undefined}
+              isCurrentUser={uid === currentUser.uid}
             />
           ))}
         </CardContent>

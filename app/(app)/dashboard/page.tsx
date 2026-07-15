@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/auth-provider";
 import { logout } from "@/lib/firebase/auth";
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [creating, setCreating] = useState(false);
+  const [usersOpen, setUsersOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -102,24 +104,43 @@ export default function DashboardPage() {
       </div>
 
       {profile.role === "admin" && (
-        <div className="space-y-3 rounded-xl border border-slate-700 p-4">
-          <h2 className="text-lg font-semibold">Użytkownicy</h2>
-          {manageableUsers.length === 0 ? (
-            <p className="text-sm text-slate-400">Brak użytkowników.</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {manageableUsers.map((entry) => (
-                <Link
-                  key={entry.uid}
-                  href={`/profile/${entry.uid}`}
-                  className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 transition-colors hover:border-indigo-500/50 hover:bg-slate-800/60"
-                >
-                  <span className="font-medium text-slate-100">{entry.nick || "Bez nicku"}</span>
-                  <span className="text-sm text-slate-400">
-                    {entry.rank ? getRankLabel(entry.rank) : "Brak rangi"}
-                  </span>
-                </Link>
-              ))}
+        <div className="rounded-xl border border-slate-700">
+          <button
+            type="button"
+            onClick={() => setUsersOpen((open) => !open)}
+            className="flex w-full items-center justify-between px-4 py-3 text-left"
+          >
+            <span className="text-lg font-semibold">
+              Użytkownicy ({manageableUsers.length})
+            </span>
+            {usersOpen ? (
+              <ChevronUp className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+          </button>
+          {usersOpen && (
+            <div className="border-t border-slate-700 px-4 pb-4 pt-3">
+              {manageableUsers.length === 0 ? (
+                <p className="text-sm text-slate-400">Brak użytkowników.</p>
+              ) : (
+                <div className="grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2">
+                  {manageableUsers.map((entry) => (
+                    <Link
+                      key={entry.uid}
+                      href={`/profile/${entry.uid}`}
+                      className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 transition-colors hover:border-indigo-500/50 hover:bg-slate-800/60"
+                    >
+                      <span className="font-medium text-slate-100">
+                        {entry.nick || "Bez nicku"}
+                      </span>
+                      <span className="text-sm text-slate-400">
+                        {entry.rank ? getRankLabel(entry.rank) : "Brak rangi"}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
