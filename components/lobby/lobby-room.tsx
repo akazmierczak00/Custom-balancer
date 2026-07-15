@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
+import { AdminLobbyControls } from "@/components/lobby/admin-lobby-controls";
 import { ConfirmPopup } from "@/components/lobby/confirm-popup";
 import { LobbyParticipants } from "@/components/lobby/lobby-participants";
 import { RoleReveal } from "@/components/lobby/role-reveal";
@@ -38,6 +39,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const isAdmin = profile.role === "admin";
   const remaining = usePhaseTimer(lobby.phaseTimerEndsAt);
   const transitionLock = useRef(false);
+  const weaknessRevealInFlight = useRef(false);
   const [weaknessLoading, setWeaknessLoading] = useState(false);
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
@@ -83,20 +85,36 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   }, [lobby.status, remaining, lobby.id, runTransition]);
 
   useEffect(() => {
-    if (lobby.status === "weakness_reveal") {
-      const flat = lobby.weaknesses.drawn.flat();
-      const nextIndex = lobby.weaknesses.revealIndex;
-      if (nextIndex < flat.length) {
-        const cell = flat[nextIndex];
-        const delay = getRevealDelay(cell.rarity);
-        const timer = setTimeout(() => {
-          runTransition(() => revealNextWeakness(lobby.id));
-        }, delay);
-        return () => clearTimeout(timer);
+    if (lobby.status !== "weakness_reveal" || !lobby.weaknesses?.drawn?.length) {
+      return;
+    }
+
+    const flat = lobby.weaknesses.drawn.flat();
+    const nextIndex = lobby.weaknesses.revealIndex ?? 0;
+
+    const advance = async () => {
+      if (weaknessRevealInFlight.current) return;
+      weaknessRevealInFlight.current = true;
+      try {
+        await revealNextWeakness(lobby.id);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Błąd odkrywania osłabienia");
+      } finally {
+        weaknessRevealInFlight.current = false;
       }
-      if (nextIndex >= flat.length && flat.length > 0) {
-        runTransition(() => revealNextWeakness(lobby.id));
-      }
+    };
+
+    if (nextIndex < flat.length) {
+      const cell = flat[nextIndex];
+      const delay = getRevealDelay(cell.rarity);
+      const timer = setTimeout(() => {
+        void advance();
+      }, delay);
+      return () => clearTimeout(timer);
+    }
+
+    if (nextIndex >= flat.length) {
+      void advance();
     }
   }, [
     lobby.status,
@@ -118,6 +136,9 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         ? "Wygrał aktualny skład — brak zmiany"
         : undefined
       : undefined;
+
+  const canStartLineupVoting =
+    lobby.status === "overview" && !lobby.votes?.locked && isAdmin;
 
   const canStartWeaknessReveal =
     lobby.status === "overview" &&
@@ -173,7 +194,9 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             {lobby.status === "open" ? ` · ${filledSlots}/10` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-end gap-2">
+          {isAdmin && <AdminLobbyControls lobby={lobby} />}
+          <div className="flex items-center gap-3">
           {lobby.status === "open" && isAdmin && filledSlots < 10 && (
             <Button variant="outline" size="sm" onClick={handleFillTestBots}>
               Wypełnij botami (test)
@@ -184,6 +207,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             lobby.status !== "reshuffle_reveal" && (
             <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
           )}
+          </div>
         </div>
       </div>
 
@@ -230,7 +254,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         />
       )}
 
-      {lobby.status === "overview" && !lobby.votes.locked && isAdmin && (
+      {canStartLineupVoting && (
         <div className="flex justify-center">
           <Button onClick={() => startLineupVoting(lobby.id)}>
             Rozpocznij głosowanie
@@ -270,7 +294,8 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
       {(lobby.status === "weakness_reveal" ||
         lobby.status === "weakness_pick" ||
-        lobby.weaknesses.confirmed) && (
+        lobby.weaknesses?.confirmed) &&
+        lobby.weaknesses && (
         <div className="space-y-4">
           <WeaknessGrid
             weaknesses={lobby.weaknesses}

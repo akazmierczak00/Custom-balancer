@@ -625,7 +625,7 @@ export async function resolveProposalVote(lobbyId: string) {
   await updateDoc(lobbyRef, {
     status: "overview",
     ...applyProposal(lobby, winningProposal),
-    votes: defaultVotes(),
+    votes: { ...defaultVotes(), locked: true },
     phaseTimerEndsAt: null,
     updatedAt: serverTimestamp(),
   });
@@ -891,4 +891,119 @@ export function isPlayerInTeam(
   uid: string
 ): boolean {
   return assignment.some((p) => p.uid === uid);
+}
+
+export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+
+  if (phase === "weakness_reveal") {
+    await startWeaknessReveal(lobbyId);
+    return;
+  }
+
+  const updates: Record<string, unknown> = {
+    status: phase,
+    updatedAt: serverTimestamp(),
+  };
+
+  switch (phase) {
+    case "confirming":
+      updates.acceptDeadline = Timestamp.fromMillis(
+        Date.now() + CONFIRM_SECONDS * 1000
+      );
+      updates.phaseTimerEndsAt = Timestamp.fromMillis(
+        Date.now() + CONFIRM_SECONDS * 1000
+      );
+      break;
+    case "drafting":
+      updates.phaseTimerEndsAt = null;
+      break;
+    case "reveal":
+      updates.revealRoleIndex = 0;
+      updates.phaseTimerEndsAt = Timestamp.fromMillis(
+        Date.now() + REVEAL_SECONDS * 1000
+      );
+      break;
+    case "overview":
+      updates.phaseTimerEndsAt = null;
+      updates.votes = { ...defaultVotes(), locked: true };
+      updates.proposalA = null;
+      updates.proposalB = null;
+      break;
+    case "voting_lineup":
+      updates.votes = defaultVotes();
+      updates.phaseTimerEndsAt = null;
+      break;
+    case "reshuffle_reveal": {
+      const uids = lobby.slots.filter(Boolean) as string[];
+      if (uids.length < LOBBY_SIZE) {
+        throw new Error("Lobby musi być pełne, aby wygenerować propozycje A/B");
+      }
+      const players = await fetchLobbyPlayers(uids);
+      const { proposalA, proposalB } = generateDistinctProposals(players);
+      updates.proposalA = proposalA;
+      updates.proposalB = proposalB;
+      updates.revealRoleIndex = 0;
+      updates.votes = defaultVotes();
+      updates.phaseTimerEndsAt = Timestamp.fromMillis(
+        Date.now() + REVEAL_SECONDS * 1000
+      );
+      break;
+    }
+    case "voting_proposals": {
+      let proposalA = lobby.proposalA;
+      let proposalB = lobby.proposalB;
+      if (!proposalA || !proposalB) {
+        const uids = lobby.slots.filter(Boolean) as string[];
+        if (uids.length < LOBBY_SIZE) {
+          throw new Error("Brak propozycji A/B — uzupełnij lobby");
+        }
+        const players = await fetchLobbyPlayers(uids);
+        const proposals = generateDistinctProposals(players);
+        proposalA = proposals.proposalA;
+        proposalB = proposals.proposalB;
+      }
+      updates.proposalA = proposalA;
+      updates.proposalB = proposalB;
+      updates.votes = defaultVotes();
+      updates.phaseTimerEndsAt = null;
+      break;
+    }
+    case "weakness_pick": {
+      if (!lobby.weaknesses?.drawn?.length) {
+        throw new Error("Najpierw wylosuj osłabienia");
+      }
+      const drawn = lobby.weaknesses.drawn.map((row) =>
+        row.map((cell) => ({ ...cell, revealed: true }))
+      );
+      updates.weaknesses = {
+        ...lobby.weaknesses,
+        drawn,
+        selectorUid: findWeaknessSelector(lobby),
+        pointsTotal: 3 + (lobby.reshuffleBonusGranted ? 1 : 0),
+        pointsSpent: 0,
+        selected: [],
+        confirmed: false,
+        revealIndex: drawn.flat().length,
+      };
+      updates.phaseTimerEndsAt = null;
+      break;
+    }
+    case "final":
+      updates.phaseTimerEndsAt = null;
+      break;
+    case "playing":
+    case "post_game":
+    case "cooldown":
+      updates.phaseTimerEndsAt = null;
+      break;
+    default:
+      throw new Error(`Faza ${phase} nie jest obsługiwana przez panel admina`);
+  }
+
+  await updateDoc(lobbyRef, updates);
 }
