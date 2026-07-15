@@ -35,7 +35,7 @@ function RoleRevealRow({
   return (
     <div
       className={cn(
-        "grid min-w-0 items-stretch",
+        "grid min-w-0 items-stretch animate-role-reveal-in",
         compact
           ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
           : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4",
