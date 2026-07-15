@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { castProposalVote } from "@/lib/lobby/service";
+import { castProposalVote, castProposalVoteForTeam } from "@/lib/lobby/service";
 import { Lobby } from "@/types";
 import { TeamOverview } from "@/components/lobby/team-overview";
 
@@ -11,6 +11,7 @@ interface ProposalVotePanelProps {
   currentUid: string;
   locked: boolean;
   remaining: number;
+  isAdmin?: boolean;
 }
 
 export function ProposalVotePanel({
@@ -18,6 +19,7 @@ export function ProposalVotePanel({
   currentUid,
   locked,
   remaining,
+  isAdmin = false,
 }: ProposalVotePanelProps) {
   const votes = lobby.votes.proposals;
   const countA = Object.values(votes).filter((v) => v === "A").length;
@@ -29,6 +31,14 @@ export function ProposalVotePanel({
       await castProposalVote(lobby.id, currentUid, choice);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd głosowania");
+    }
+  };
+
+  const voteForTeam = async (choice: "A" | "B") => {
+    try {
+      await castProposalVoteForTeam(lobby.id, choice);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd głosowania za team");
     }
   };
 
@@ -58,7 +68,7 @@ export function ProposalVotePanel({
         </div>
 
         {!locked && (
-          <div className="flex justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <Button
               variant={myVote === "A" ? "default" : "outline"}
               onClick={() => vote("A")}
@@ -73,6 +83,16 @@ export function ProposalVotePanel({
             >
               Głosuj B ({countB})
             </Button>
+            {isAdmin && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => voteForTeam("A")}>
+                  Team: A
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => voteForTeam("B")}>
+                  Team: B
+                </Button>
+              </>
+            )}
           </div>
         )}
 

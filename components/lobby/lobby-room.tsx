@@ -231,6 +231,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           locked={lobby.votes.locked}
           remaining={remaining}
           resultText={lineupResultText}
+          isAdmin={isAdmin}
         />
       )}
 
@@ -241,6 +242,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           currentUid={profile.uid}
           locked={lobby.votes.locked}
           remaining={remaining}
+          isAdmin={isAdmin}
         />
       )}
 

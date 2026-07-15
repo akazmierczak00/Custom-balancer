@@ -419,6 +419,43 @@ export async function castLineupVote(
   });
 }
 
+export async function castLineupVoteForTeam(
+  lobbyId: string,
+  choice: "accept" | "reshuffle"
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = snap.data() as Lobby;
+    if (lobby.status !== "voting_lineup") throw new Error("Głosowanie nieaktywne");
+    if (lobby.votes.locked) throw new Error("Głosowanie zablokowane");
+
+    const lineup = { ...lobby.votes.lineup };
+    for (const uid of lobby.slots) {
+      if (uid) lineup[uid] = choice;
+    }
+
+    const votes = { ...lobby.votes, lineup };
+    const voteCount = Object.keys(lineup).length;
+    const updates: Record<string, unknown> = {
+      votes,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (voteCount >= LOBBY_SIZE) {
+      updates.status = "locked_lineup";
+      updates.votes = { ...votes, locked: true };
+      updates.phaseTimerEndsAt = Timestamp.fromMillis(
+        Date.now() + VOTE_LOCK_SECONDS * 1000
+      );
+    }
+
+    tx.update(lobbyRef, updates);
+  });
+}
+
 export async function resolveLineupVote(lobbyId: string) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   const snap = await getDoc(lobbyRef);
@@ -506,6 +543,40 @@ export async function castProposalVote(
     };
 
     const voteCount = Object.keys(votes.proposals).length;
+    const updates: Record<string, unknown> = {
+      votes,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (voteCount >= LOBBY_SIZE) {
+      updates.status = "locked_proposals";
+      updates.votes = { ...votes, locked: true };
+      updates.phaseTimerEndsAt = Timestamp.fromMillis(
+        Date.now() + VOTE_LOCK_SECONDS * 1000
+      );
+    }
+
+    tx.update(lobbyRef, updates);
+  });
+}
+
+export async function castProposalVoteForTeam(lobbyId: string, choice: "A" | "B") {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = snap.data() as Lobby;
+    if (lobby.status !== "voting_proposals") throw new Error("Głosowanie nieaktywne");
+    if (lobby.votes.locked) throw new Error("Głosowanie zablokowane");
+
+    const proposals = { ...lobby.votes.proposals };
+    for (const uid of lobby.slots) {
+      if (uid) proposals[uid] = choice;
+    }
+
+    const votes = { ...lobby.votes, proposals };
+    const voteCount = Object.keys(proposals).length;
     const updates: Record<string, unknown> = {
       votes,
       updatedAt: serverTimestamp(),

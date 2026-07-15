@@ -134,6 +134,8 @@ export function assignRoles(
         nick: player.nick,
         rank: player.rank,
         role,
+        rolePriorities: player.rolePriorities,
+        matchHistory: player.matchHistory,
       });
     }
 

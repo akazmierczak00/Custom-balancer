@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { castLineupVote } from "@/lib/lobby/service";
+import { castLineupVote, castLineupVoteForTeam } from "@/lib/lobby/service";
 import { Lobby } from "@/types";
 
 interface LineupVotePanelProps {
@@ -11,6 +11,7 @@ interface LineupVotePanelProps {
   locked: boolean;
   remaining: number;
   resultText?: string;
+  isAdmin?: boolean;
 }
 
 export function LineupVotePanel({
@@ -19,6 +20,7 @@ export function LineupVotePanel({
   locked,
   remaining,
   resultText,
+  isAdmin = false,
 }: LineupVotePanelProps) {
   const votes = lobby.votes.lineup;
   const acceptCount = Object.values(votes).filter((v) => v === "accept").length;
@@ -33,6 +35,14 @@ export function LineupVotePanel({
     }
   };
 
+  const voteForTeam = async (choice: "accept" | "reshuffle") => {
+    try {
+      await castLineupVoteForTeam(lobby.id, choice);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd głosowania za team");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -44,7 +54,7 @@ export function LineupVotePanel({
         ) : (
           <>
             {!locked && (
-              <div className="flex flex-wrap justify-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-3">
                 <Button
                   variant={myVote === "accept" ? "default" : "outline"}
                   onClick={() => vote("accept")}
@@ -59,6 +69,24 @@ export function LineupVotePanel({
                 >
                   Zmiana składów
                 </Button>
+                {isAdmin && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => voteForTeam("accept")}
+                    >
+                      Team: Akceptuj
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => voteForTeam("reshuffle")}
+                    >
+                      Team: Zmiana
+                    </Button>
+                  </>
+                )}
               </div>
             )}
             {locked && (
