@@ -41,6 +41,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const transitionLock = useRef(false);
   const weaknessRevealInFlight = useRef(false);
   const [weaknessLoading, setWeaknessLoading] = useState(false);
+  const [adminActingAsSelector, setAdminActingAsSelector] = useState(false);
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
     if (transitionLock.current) return;
@@ -128,6 +129,26 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     }
   }, [lobby.status, remaining, isAdmin, lobby.id, runTransition]);
 
+  useEffect(() => {
+    if (lobby.status !== "weakness_pick") {
+      setAdminActingAsSelector(false);
+    }
+  }, [lobby.status]);
+
+  const selectorUid = lobby.weaknesses?.selectorUid ?? null;
+  const selectorPlayer = [...lobby.team1, ...lobby.team2].find(
+    (player) => player.uid === selectorUid
+  );
+  const canAdminActAsSelector =
+    isAdmin &&
+    lobby.status === "weakness_pick" &&
+    !!selectorUid &&
+    selectorUid !== profile.uid;
+  const isActingAsSelector =
+    selectorUid === profile.uid || (isAdmin && adminActingAsSelector);
+  const getWeaknessActingUid = () =>
+    isAdmin && adminActingAsSelector && selectorUid ? selectorUid : profile.uid;
+
   const lineupResultText =
     lobby.status === "overview" && lobby.votes.locked
       ? Object.values(lobby.votes.lineup).filter((v) => v === "reshuffle").length < 6
@@ -175,7 +196,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     const cell = lobby.weaknesses?.drawn[getWeaknessCellIndex(row, col)];
     if (!cell) return;
     try {
-      await selectWeakness(lobby.id, profile.uid, cell);
+      await selectWeakness(lobby.id, getWeaknessActingUid(), cell);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd wyboru");
     }
@@ -183,7 +204,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
   const handleConfirmWeaknesses = async () => {
     try {
-      await confirmWeaknesses(lobby.id, profile.uid);
+      await confirmWeaknesses(lobby.id, getWeaknessActingUid());
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd zatwierdzenia");
     }
@@ -303,14 +324,27 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
       {showWeaknessSection && (
         <div className="space-y-4">
+          {canAdminActAsSelector && (
+            <div className="flex justify-center">
+              <Button
+                variant={adminActingAsSelector ? "default" : "outline"}
+                onClick={() => setAdminActingAsSelector((value) => !value)}
+              >
+                {adminActingAsSelector
+                  ? "Wyjdź z widoku selektora"
+                  : `Wciel się w ${selectorPlayer?.nick ?? "selektora"}`}
+              </Button>
+            </div>
+          )}
           <WeaknessGrid
             weaknesses={lobby.weaknesses}
             selectable={lobby.status === "weakness_pick"}
             onSelect={handleWeaknessSelect}
             currentUid={profile.uid}
+            actAsSelector={isAdmin && adminActingAsSelector}
           />
           {lobby.status === "weakness_pick" &&
-            lobby.weaknesses.selectorUid === profile.uid &&
+            isActingAsSelector &&
             lobby.weaknesses.pointsSpent === lobby.weaknesses.pointsTotal && (
               <div className="flex justify-center">
                 <Button onClick={handleConfirmWeaknesses}>Zatwierdź osłabienia</Button>

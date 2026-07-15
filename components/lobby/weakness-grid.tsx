@@ -11,6 +11,7 @@ interface WeaknessGridProps {
   selectable?: boolean;
   onSelect?: (row: number, col: number) => void;
   currentUid?: string;
+  actAsSelector?: boolean;
 }
 
 export function WeaknessGrid({
@@ -19,8 +20,11 @@ export function WeaknessGrid({
   selectable,
   onSelect,
   currentUid,
+  actAsSelector = false,
 }: WeaknessGridProps) {
-  const isSelector = weaknesses.selectorUid === currentUid;
+  const isSelector =
+    !!weaknesses.selectorUid &&
+    (weaknesses.selectorUid === currentUid || actAsSelector);
   const canSelect = selectable && isSelector && !weaknesses.confirmed;
 
   useEffect(() => {
@@ -82,7 +86,6 @@ export function WeaknessGrid({
                   >
                     {cell.revealed ? (
                       <>
-                        <p className="text-xs text-amber-400">Tier {cell.tier}</p>
                         <p className="font-semibold">{cell.name}</p>
                         <p className="mt-1 text-sm text-slate-300">{cell.text}</p>
                       </>
