@@ -20,7 +20,11 @@ import {
   sanitizeWeaknessForm,
   WeaknessFormInput,
 } from "@/lib/weaknesses/helpers";
-import { drawWeaknessGrid } from "@/lib/algorithms/drawWeaknesses";
+import {
+  drawWeaknessGrid,
+  flattenWeaknessGrid,
+  normalizeDrawnWeaknesses,
+} from "@/lib/algorithms/drawWeaknesses";
 import { compareRanks } from "@/lib/constants/ranks";
 import {
   getAvailableTestBots,
@@ -51,7 +55,7 @@ function emptySlots(): (string | null)[] {
 
 function defaultWeaknessesState() {
   return {
-    drawn: [] as WeaknessCell[][],
+    drawn: [] as WeaknessCell[],
     selected: [] as SelectedWeakness[],
     pointsTotal: 3,
     pointsSpent: 0,
@@ -641,7 +645,7 @@ export async function startWeaknessReveal(lobbyId: string) {
     throw new Error("Brak osłabień w bazie — dodaj je w panelu admina");
   }
 
-  const drawn = drawWeaknessGrid(weaknesses);
+  const drawn = flattenWeaknessGrid(drawWeaknessGrid(weaknesses));
 
   await updateDoc(doc(getFirebaseDb(), "lobbies", lobbyId), {
     status: "weakness_reveal",
@@ -661,13 +665,10 @@ export async function revealNextWeakness(lobbyId: string) {
   if (!snap.exists()) return;
 
   const lobby = snap.data() as Lobby;
-  const drawn = lobby.weaknesses.drawn.map((row) =>
-    row.map((cell) => ({ ...cell }))
-  );
-
-  const flat = drawn.flat();
+  const drawn = [...normalizeDrawnWeaknesses(lobby.weaknesses.drawn)];
   const nextIndex = lobby.weaknesses.revealIndex;
-  if (nextIndex >= flat.length) {
+
+  if (nextIndex >= drawn.length) {
     const selectorUid = findWeaknessSelector(lobby);
     const pointsTotal = 3 + (lobby.reshuffleBonusGranted ? 1 : 0);
     await updateDoc(lobbyRef, {
@@ -677,17 +678,14 @@ export async function revealNextWeakness(lobbyId: string) {
         drawn,
         selectorUid,
         pointsTotal,
-        revealIndex: flat.length,
+        revealIndex: drawn.length,
       },
       updatedAt: serverTimestamp(),
     });
     return;
   }
 
-  const cell = flat[nextIndex];
-  const rowIdx = Math.floor(nextIndex / 3);
-  const colIdx = nextIndex % 3;
-  drawn[rowIdx][colIdx] = { ...cell, revealed: true };
+  drawn[nextIndex] = { ...drawn[nextIndex], revealed: true };
 
   await updateDoc(lobbyRef, {
     weaknesses: {
@@ -974,12 +972,11 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       break;
     }
     case "weakness_pick": {
-      if (!lobby.weaknesses?.drawn?.length) {
+      const existing = normalizeDrawnWeaknesses(lobby.weaknesses?.drawn);
+      if (!existing.length) {
         throw new Error("Najpierw wylosuj osłabienia");
       }
-      const drawn = lobby.weaknesses.drawn.map((row) =>
-        row.map((cell) => ({ ...cell, revealed: true }))
-      );
+      const drawn = existing.map((cell) => ({ ...cell, revealed: true }));
       updates.weaknesses = {
         ...lobby.weaknesses,
         drawn,
@@ -988,7 +985,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
         pointsSpent: 0,
         selected: [],
         confirmed: false,
-        revealIndex: drawn.flat().length,
+        revealIndex: drawn.length,
       };
       updates.phaseTimerEndsAt = null;
       break;

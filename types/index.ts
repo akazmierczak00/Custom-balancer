@@ -111,7 +111,7 @@ export interface SelectedWeakness {
 }
 
 export interface LobbyWeaknesses {
-  drawn: WeaknessCell[][];
+  drawn: WeaknessCell[];
   selected: SelectedWeakness[];
   pointsTotal: number;
   pointsSpent: number;

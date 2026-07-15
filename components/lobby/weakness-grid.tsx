@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { getRevealIntensity } from "@/lib/algorithms/drawWeaknesses";
+import { getRevealIntensity, WEAKNESS_GRID_COLS } from "@/lib/algorithms/drawWeaknesses";
 import { LobbyWeaknesses } from "@/types";
 
 interface WeaknessGridProps {
@@ -57,8 +57,12 @@ export function WeaknessGrid({
         )}
       </div>
       <div className="grid grid-cols-3 gap-3">
-        {weaknesses.drawn.map((row, rowIdx) =>
-          row.map((cell, colIdx) => (
+        {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) =>
+          Array.from({ length: WEAKNESS_GRID_COLS }, (_, colIdx) => {
+            const cell = weaknesses.drawn[rowIdx * WEAKNESS_GRID_COLS + colIdx];
+            if (!cell) return null;
+
+            return (
             <button
               key={`${rowIdx}-${colIdx}`}
               type="button"
@@ -81,7 +85,8 @@ export function WeaknessGrid({
                 <p className="text-center text-slate-500">?</p>
               )}
             </button>
-          ))
+            );
+          })
         )}
       </div>
     </div>

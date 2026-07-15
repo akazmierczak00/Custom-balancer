@@ -27,7 +27,7 @@ import {
   startPlaying,
   startWeaknessReveal,
 } from "@/lib/lobby/service";
-import { getRevealDelay } from "@/lib/algorithms/drawWeaknesses";
+import { getRevealDelay, getWeaknessCellIndex } from "@/lib/algorithms/drawWeaknesses";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyRoomProps {
@@ -89,7 +89,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       return;
     }
 
-    const flat = lobby.weaknesses.drawn.flat();
+    const drawn = lobby.weaknesses.drawn;
     const nextIndex = lobby.weaknesses.revealIndex ?? 0;
 
     const advance = async () => {
@@ -104,8 +104,8 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       }
     };
 
-    if (nextIndex < flat.length) {
-      const cell = flat[nextIndex];
+    if (nextIndex < drawn.length) {
+      const cell = drawn[nextIndex];
       const delay = getRevealDelay(cell.rarity);
       const timer = setTimeout(() => {
         void advance();
@@ -113,7 +113,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       return () => clearTimeout(timer);
     }
 
-    if (nextIndex >= flat.length) {
+    if (nextIndex >= drawn.length) {
       void advance();
     }
   }, [
@@ -157,7 +157,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   };
 
   const handleWeaknessSelect = async (row: number, col: number) => {
-    const cell = lobby.weaknesses.drawn[row]?.[col];
+    const cell = lobby.weaknesses?.drawn[getWeaknessCellIndex(row, col)];
     if (!cell) return;
     try {
       await selectWeakness(lobby.id, profile.uid, cell);

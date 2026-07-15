@@ -65,7 +65,26 @@ export function getWeaknessCost(tier: 1 | 2 | 3): number {
   return tier;
 }
 
-export function getRevealDelay(rarity: number): number {
+export const WEAKNESS_GRID_SIZE = 9;
+export const WEAKNESS_GRID_COLS = 3;
+
+export function flattenWeaknessGrid(grid: WeaknessCell[][]): WeaknessCell[] {
+  return grid.flat();
+}
+
+export function normalizeDrawnWeaknesses(
+  drawn: WeaknessCell[] | WeaknessCell[][] | undefined
+): WeaknessCell[] {
+  if (!drawn?.length) return [];
+  if (Array.isArray(drawn[0])) {
+    return (drawn as WeaknessCell[][]).flat();
+  }
+  return [...(drawn as WeaknessCell[])];
+}
+
+export function getWeaknessCellIndex(row: number, col: number): number {
+  return row * WEAKNESS_GRID_COLS + col;
+}
   return Math.max(300, (101 - rarity) * 80);
 }
 
