@@ -768,6 +768,44 @@ export async function selectWeakness(
   });
 }
 
+export async function deselectWeakness(
+  lobbyId: string,
+  uid: string,
+  cell: WeaknessCell
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = snap.data() as Lobby;
+    if (lobby.status !== "weakness_pick") throw new Error("Nie można odznaczyć osłabienia");
+    if (lobby.weaknesses.selectorUid !== uid) {
+      throw new Error("Nie jesteś selektorem osłabień");
+    }
+    if (lobby.weaknesses.confirmed) throw new Error("Osłabienia już zatwierdzone");
+
+    const selectedIndex = lobby.weaknesses.selected.findIndex(
+      (item) => item.weaknessId === cell.weaknessId && item.tier === cell.tier
+    );
+    if (selectedIndex === -1) throw new Error("Osłabienie nie jest wybrane");
+
+    const removed = lobby.weaknesses.selected[selectedIndex];
+    const selected = lobby.weaknesses.selected.filter(
+      (_, index) => index !== selectedIndex
+    );
+
+    tx.update(lobbyRef, {
+      weaknesses: toFirestoreWeaknesses({
+        ...lobby.weaknesses,
+        selected,
+        pointsSpent: lobby.weaknesses.pointsSpent - removed.cost,
+      }),
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
 export async function confirmWeaknesses(lobbyId: string, uid: string) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   await runTransaction(getFirebaseDb(), async (tx) => {

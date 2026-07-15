@@ -16,6 +16,7 @@ import {
   advanceReveal,
   advanceReshuffleReveal,
   confirmWeaknesses,
+  deselectWeakness,
   draftTeams,
   fillLobbyWithTestBots,
   resolveLineupVote,
@@ -99,7 +100,9 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       try {
         await revealNextWeakness(lobby.id);
       } catch (e) {
-        alert(e instanceof Error ? e.message : "Błąd odkrywania osłabienia");
+        const message = e instanceof Error ? e.message : "";
+        if (message.includes("Missing or insufficient permissions")) return;
+        alert(message || "Błąd odkrywania osłabienia");
       } finally {
         weaknessRevealInFlight.current = false;
       }
@@ -195,8 +198,17 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const handleWeaknessSelect = async (row: number, col: number) => {
     const cell = lobby.weaknesses?.drawn[getWeaknessCellIndex(row, col)];
     if (!cell) return;
+
+    const isSelected = lobby.weaknesses.selected.some(
+      (item) => item.weaknessId === cell.weaknessId && item.tier === cell.tier
+    );
+
     try {
-      await selectWeakness(lobby.id, getWeaknessActingUid(), cell);
+      if (isSelected) {
+        await deselectWeakness(lobby.id, getWeaknessActingUid(), cell);
+      } else {
+        await selectWeakness(lobby.id, getWeaknessActingUid(), cell);
+      }
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd wyboru");
     }

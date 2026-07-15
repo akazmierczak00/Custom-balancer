@@ -84,7 +84,7 @@ export function WeaknessGrid({
                   <button
                     key={`${rowIdx}-${colIdx}`}
                     type="button"
-                    disabled={!canSelect || !cell.revealed || selected}
+                    disabled={!canSelect || !cell.revealed}
                     onClick={() => onSelect?.(rowIdx, colIdx)}
                     className={cn(
                       "min-h-24 rounded-lg border border-slate-700 bg-slate-800/80 p-3 text-left transition-all",
@@ -94,8 +94,9 @@ export function WeaknessGrid({
                         "border-amber-400/70 bg-amber-500/15 ring-2 ring-amber-400/50",
                       canSelect &&
                         cell.revealed &&
-                        !selected &&
-                        "hover:border-amber-400 hover:bg-amber-500/10"
+                        (selected
+                          ? "hover:border-slate-400 hover:bg-slate-700/80"
+                          : "hover:border-amber-400 hover:bg-amber-500/10")
                     )}
                   >
                     {cell.revealed ? (
@@ -105,6 +106,7 @@ export function WeaknessGrid({
                         {selected && (
                           <p className="mt-2 text-xs font-semibold text-amber-300">
                             Wybrane · {cell.tier} pkt
+                            {canSelect && " · kliknij, aby odznaczyć"}
                           </p>
                         )}
                       </>
