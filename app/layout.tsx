@@ -42,7 +42,7 @@ export default async function RootLayout({
       lang="pl"
       suppressHydrationWarning
       data-theme={isY2kTheme ? "y2k" : undefined}
-      className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} h-full bg-background antialiased dark`}
     >
       <head>
         <script
@@ -52,7 +52,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
+      <body className="flex min-h-full flex-col bg-background text-slate-100">
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>

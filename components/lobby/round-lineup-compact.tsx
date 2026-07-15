@@ -31,7 +31,7 @@ export function RoundLineupCompact({
             {sortByRole(team).map((player) => (
               <li
                 key={player.uid}
-                className="rounded-md bg-slate-800/50 px-2 py-1 text-sm text-slate-200"
+                className="lobby-lineup-nick rounded-md border border-slate-700/80 bg-slate-800/50 px-2 py-1 text-sm text-slate-200"
               >
                 {player.nick}
               </li>

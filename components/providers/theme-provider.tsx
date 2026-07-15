@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Y2kBackgroundStickers } from "@/components/providers/y2k-background-stickers";
 
 const STORAGE_KEY = "custom-balancer-theme";
 
@@ -55,7 +54,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, ready }}>
-      {theme === "y2k" && ready && <Y2kBackgroundStickers />}
       <div className="relative z-10">{children}</div>
       {ready && (
         <button

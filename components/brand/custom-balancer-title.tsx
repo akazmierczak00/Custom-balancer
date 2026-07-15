@@ -6,16 +6,19 @@ import { useTheme } from "@/components/providers/theme-provider";
 
 function Y2kDiamondLogo({ className }: { className?: string }) {
   return (
-    <h1 className={cn("brand-title-logo", className)} aria-label="Custom Balancer">
-      <Image
-        src="/brand/custom-balancer-y2k.png"
-        alt=""
-        width={1024}
-        height={216}
-        className="brand-title-image"
-        priority
-      />
-    </h1>
+    <div className={cn("brand-title-banner", className)}>
+      <div className="brand-title-dots" aria-hidden />
+      <h1 className="brand-title-logo" aria-label="Custom Balancer">
+        <Image
+          src="/brand/custom-balancer-y2k.png"
+          alt=""
+          width={1024}
+          height={216}
+          className="brand-title-image"
+          priority
+        />
+      </h1>
+    </div>
   );
 }
 

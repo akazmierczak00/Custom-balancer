@@ -18,6 +18,7 @@ import { getRankLabel } from "@/lib/constants/ranks";
 import { CustomBalancerTitle } from "@/components/brand/custom-balancer-title";
 import { useTheme } from "@/components/providers/theme-provider";
 import { LobbyTile } from "@/components/lobby/lobby-tile";
+import { DashboardY2kDecorations } from "@/components/dashboard/dashboard-y2k-decorations";
 import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
@@ -108,7 +109,9 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4">
+    <div className="dashboard-screen min-h-screen w-full">
+      {isY2kTheme && <DashboardY2kDecorations />}
+      <div className="dashboard-content relative mx-auto max-w-4xl space-y-6 p-4">
       {isY2kTheme ? (
         <div className="flex flex-col items-center gap-4">
           <CustomBalancerTitle />
@@ -125,11 +128,11 @@ export default function DashboardPage() {
       )}
 
       {profile.role === "admin" && (
-        <div className="rounded-xl border border-slate-700">
+        <div className="dashboard-panel overflow-hidden rounded-xl border border-slate-700">
           <button
             type="button"
             onClick={() => setUsersOpen((open) => !open)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left"
+            className="dashboard-panel-header flex w-full items-center justify-between rounded-none px-4 py-3 text-left"
           >
             <span className="text-lg font-semibold">
               Użytkownicy ({manageableUsers.length})
@@ -141,7 +144,7 @@ export default function DashboardPage() {
             )}
           </button>
           {usersOpen && (
-            <div className="border-t border-slate-700 px-4 pb-4 pt-3">
+            <div className="dashboard-panel-body border-t border-slate-700 px-4 pb-4 pt-3">
               {manageableUsers.length === 0 ? (
                 <p className="text-sm text-slate-400">Brak użytkowników.</p>
               ) : (
@@ -150,7 +153,7 @@ export default function DashboardPage() {
                     <Link
                       key={entry.uid}
                       href={`/profile/${entry.uid}`}
-                      className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 transition-colors hover:border-indigo-500/50 hover:bg-slate-800/60"
+                      className="dashboard-user-row flex items-center justify-between rounded-lg border border-slate-700 px-4 py-3 transition-colors hover:border-indigo-500/50"
                     >
                       <span className="font-medium text-slate-100">
                         {entry.nick || "Bez nicku"}
@@ -168,7 +171,7 @@ export default function DashboardPage() {
       )}
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Aktywne lobby</h2>
+        <h2 className="dashboard-section-title text-lg font-semibold">Aktywne lobby</h2>
         {activeLobbies.length === 0 ? (
           <p className="text-slate-400">Brak aktywnych lobby.</p>
         ) : (
@@ -184,7 +187,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Zakończone lobby</h2>
+        <h2 className="dashboard-section-title text-lg font-semibold">Zakończone lobby</h2>
         {completedLobbies.length === 0 ? (
           <p className="text-slate-400">Brak zakończonych lobby.</p>
         ) : (
@@ -197,6 +200,7 @@ export default function DashboardPage() {
             />
           ))
         )}
+      </div>
       </div>
     </div>
   );

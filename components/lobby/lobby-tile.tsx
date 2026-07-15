@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlayerBanner } from "@/components/profile/player-banner";
 import { RoundLineupCompact } from "@/components/lobby/round-lineup-compact";
 import { formatLobbyPlayedDate, formatRoundCount } from "@/lib/lobby/format";
 import { joinLobby, leaveLobby, fillLobbyWithTestBots, deleteLobby } from "@/lib/lobby/service";
+import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyTileProps {
@@ -16,7 +16,7 @@ interface LobbyTileProps {
   users: Record<string, UserProfile>;
 }
 
-export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
+export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -75,7 +75,7 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
   };
 
   return (
-    <Card className="lobby-tile-card">
+    <Card className="lobby-tile-card overflow-hidden">
       <CardHeader className="lobby-tile-card-header flex flex-row items-center justify-between">
         <div>
           <CardTitle className="lobby-tile-card-title">Lobby #{lobby.id.slice(0, 6)}</CardTitle>
@@ -132,7 +132,7 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
       </CardHeader>
 
       {expanded && (
-        <CardContent className="space-y-4">
+        <CardContent className="lobby-tile-card-content space-y-4 pt-5">
           {isCompleted ? (
             roundCount === 0 ? (
               <p className="text-sm text-slate-400">Brak zapisanych rund.</p>
@@ -141,7 +141,7 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
                 {lobby.roundHistory.map((round) => (
                   <div
                     key={round.roundNumber}
-                    className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/30 p-4"
+                    className="lobby-round-summary space-y-3 rounded-xl border border-slate-700 p-4"
                   >
                     <p className="font-semibold text-slate-200">
                       Runda {round.roundNumber}
@@ -156,18 +156,25 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
               </div>
             )
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {lobby.slots.map((uid, i) => (
-                <PlayerBanner
-                  key={i}
-                  player={uid ? users[uid] : undefined}
-                  isCurrentUser={uid === currentUser.uid}
-                />
-              ))}
+            <div className="lobby-round-summary space-y-3 rounded-xl border border-slate-700 p-4">
+              <p className="font-semibold text-slate-200">Uczestnicy · {filled}/10</p>
+              <ul className="grid grid-cols-2 gap-1">
+                {lobby.slots.map((uid, i) => (
+                  <li
+                    key={i}
+                    className={cn(
+                      "lobby-lineup-nick rounded-md border border-slate-700/80 px-2 py-1 text-sm",
+                      uid ? "text-slate-200" : "text-slate-500"
+                    )}
+                  >
+                    {uid ? users[uid]?.nick ?? "…" : "Pusty slot"}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </CardContent>
       )}
     </Card>
   );
-}
+});

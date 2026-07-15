@@ -44,6 +44,15 @@ body {
 [data-theme="y2k"] {
   --background: #1a0618;
   --foreground: #fff0fa;
+  --surface-page: #1a0618;
+  --surface-card: #2a1028;
+  --surface-header: #3d1a3a;
+  --surface-content: #301230;
+  --surface-panel: #4a1e4c;
+  --surface-nick: #5a2860;
+  --border-soft: #7a4080;
+  --border-accent: #c878b8;
+  --border-glow: #e878c8;
 
   --color-slate-950: #1a0618;
   --color-slate-900: #2a1028;
@@ -87,31 +96,9 @@ body {
   --color-red-300: #ff9eb8;
 }
 
+[data-theme="y2k"] html,
 [data-theme="y2k"] body {
-  background:
-    radial-gradient(circle at top right, rgb(255 45 155 / 0.12), transparent 35%),
-    radial-gradient(circle at bottom left, rgb(255 120 200 / 0.1), transparent 40%),
-    var(--background);
-}
-
-@keyframes y2k-sticker-float {
-  0%,
-  100% {
-    transform: rotate(var(--y2k-rotate, 0deg)) translateY(0);
-  }
-  50% {
-    transform: rotate(calc(var(--y2k-rotate, 0deg) + 4deg)) translateY(-10px);
-  }
-}
-
-[data-theme="y2k"] .y2k-sticker {
-  animation: y2k-sticker-float 5s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-theme="y2k"] .y2k-sticker {
-    animation: none;
-  }
+  background-color: var(--background);
 }
 
 /* Y2K diamond WordArt logo image */
@@ -125,51 +112,169 @@ body {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.brand-title-banner {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid rgb(255 148 210 / 0.5);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgb(8 2 6 / 0.35);
+  background-color: #1a0618;
+}
+
+.brand-title-dots {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.52;
+  background-image: url(/brand/y2k-dots-bg.svg);
+  background-size: 280px 140px;
+  background-repeat: repeat;
+  pointer-events: none;
+}
+
+.brand-title-banner .brand-title-logo {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.brand-title-banner .brand-title-image {
+  display: block;
+  width: 100%;
+  height: auto;
   mix-blend-mode: screen;
-  filter: drop-shadow(0 0 18px rgb(255 200 240 / 0.35));
 }
 
 [data-theme="y2k"] .lobby-tile-card {
-  position: relative;
   overflow: hidden;
-  isolation: isolate;
-  background: rgb(42 16 40 / 0.88);
-  border-color: rgb(255 120 200 / 0.35);
-}
-
-[data-theme="y2k"] .lobby-tile-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url(/brand/y2k-leopard-bg.png);
-  background-size: 220px;
-  background-repeat: repeat;
-  opacity: 0.25;
-  pointer-events: none;
-  z-index: 0;
-}
-
-[data-theme="y2k"] .lobby-tile-card > * {
-  position: relative;
-  z-index: 1;
+  border-color: var(--border-accent);
+  background-color: var(--surface-card) !important;
+  box-shadow: 0 10px 28px rgb(8 2 6 / 0.42);
 }
 
 [data-theme="y2k"] .lobby-tile-card-header {
-  background: linear-gradient(
-    180deg,
-    rgb(26 6 24 / 0.98) 0%,
-    rgb(42 16 40 / 0.96) 100%
-  );
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgb(255 148 210 / 0.35);
-  box-shadow: 0 6px 18px rgb(26 6 24 / 0.5);
+  background-color: var(--surface-header);
+  border-bottom: 1px solid var(--border-glow);
+  border-radius: 0;
 }
 
 [data-theme="y2k"] .lobby-tile-card-title {
   color: #fff0fa;
-  text-shadow: 0 1px 10px rgb(26 6 24 / 0.85);
+  text-shadow: 0 0 14px rgb(255 120 200 / 0.2);
 }
 
 [data-theme="y2k"] .lobby-tile-card-subtitle {
   color: #ffc8eb !important;
+}
+
+[data-theme="y2k"] .lobby-tile-card-content {
+  background-color: var(--surface-content);
+  border-radius: 0;
+}
+
+[data-theme="y2k"] .lobby-round-summary {
+  background-color: var(--surface-panel) !important;
+  border-color: var(--border-glow);
+  box-shadow: inset 0 1px 0 rgb(255 180 220 / 0.06);
+}
+
+[data-theme="y2k"] .lobby-round-summary > p {
+  color: #fff0fa;
+}
+
+[data-theme="y2k"] .lobby-lineup-nick {
+  background-color: var(--surface-nick) !important;
+  border-color: var(--border-accent);
+  color: #fff8fc;
+}
+
+[data-theme="y2k"] .dashboard-panel {
+  overflow: hidden;
+  background-color: var(--surface-card);
+  border-color: var(--border-accent);
+  box-shadow: 0 10px 28px rgb(8 2 6 / 0.42);
+}
+
+[data-theme="y2k"] .dashboard-panel-header {
+  background-color: var(--surface-header);
+  border-bottom: 1px solid var(--border-glow);
+  border-radius: 0;
+}
+
+[data-theme="y2k"] .dashboard-panel-body {
+  background-color: var(--surface-content);
+  border-color: var(--border-soft);
+  border-radius: 0;
+}
+
+[data-theme="y2k"] .dashboard-user-row {
+  background-color: var(--surface-panel);
+  border-color: var(--border-soft);
+}
+
+[data-theme="y2k"] .dashboard-user-row:hover {
+  background-color: var(--surface-nick);
+  border-color: var(--border-accent);
+}
+
+[data-theme="y2k"] .dashboard-section-title {
+  color: #ffc8eb;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 18px rgb(255 94 210 / 0.22);
+}
+
+[data-theme="y2k"] .dashboard-screen {
+  position: relative;
+  width: 100%;
+  background: transparent;
+}
+
+[data-theme="y2k"] .dashboard-screen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 85% 55% at 18% 8%, rgb(255 126 200 / 0.24) 0%, transparent 58%),
+    radial-gradient(ellipse 70% 50% at 82% 18%, rgb(255 45 155 / 0.18) 0%, transparent 54%),
+    radial-gradient(ellipse 80% 45% at 50% 92%, rgb(90 40 96 / 0.32) 0%, transparent 56%),
+    radial-gradient(ellipse 55% 40% at 6% 72%, rgb(233 30 140 / 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 38% at 94% 68%, rgb(255 148 210 / 0.12) 0%, transparent 48%),
+    linear-gradient(
+      168deg,
+      #140414 0%,
+      #2a1028 20%,
+      #4a1e4c 46%,
+      #3d1a3a 68%,
+      #251020 86%,
+      #1a0618 100%
+    );
+}
+
+[data-theme="y2k"] .dashboard-decorations {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme="y2k"] .dashboard-decoration {
+  position: absolute;
+  pointer-events: none;
+  transform-origin: center center;
+}
+
+[data-theme="y2k"] .dashboard-content {
+  position: relative;
+  z-index: 1;
 }
