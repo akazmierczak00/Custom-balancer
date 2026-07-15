@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +41,7 @@ export function SessionSummaryPanel({ lobby, isAdmin }: SessionSummaryPanelProps
         {rounds.map((round) => (
           <RoundSummaryCard
             key={round.roundNumber}
-            lobbyId={lobby.id}
+            lobby={lobby}
             round={round}
             isAdmin={isAdmin}
           />
@@ -53,19 +52,19 @@ export function SessionSummaryPanel({ lobby, isAdmin }: SessionSummaryPanelProps
 }
 
 interface RoundSummaryCardProps {
-  lobbyId: string;
+  lobby: Lobby;
   round: Lobby["roundHistory"][number];
   isAdmin: boolean;
 }
 
-function RoundSummaryCard({ lobbyId, round, isAdmin }: RoundSummaryCardProps) {
+function RoundSummaryCard({ lobby, round, isAdmin }: RoundSummaryCardProps) {
   const [youtubeUrl, setYoutubeUrl] = useState(round.youtubeUrl ?? "");
   const [saving, setSaving] = useState(false);
 
   const saveYoutube = async () => {
     setSaving(true);
     try {
-      await updateRoundMedia(lobbyId, round.roundNumber, {
+      await updateRoundMedia(lobby.id, round.roundNumber, {
         youtubeUrl: youtubeUrl.trim() || undefined,
       });
     } catch (e) {
@@ -97,27 +96,6 @@ function RoundSummaryCard({ lobbyId, round, isAdmin }: RoundSummaryCardProps) {
           team2={round.team2}
           compact
         />
-
-        {round.screenshotUrl && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-300">Screenshot wyników</p>
-            <a
-              href={round.screenshotUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block overflow-hidden rounded-lg border border-slate-700"
-            >
-              <Image
-                src={round.screenshotUrl}
-                alt={`Screenshot rundy ${round.roundNumber}`}
-                width={800}
-                height={450}
-                className="h-auto max-h-48 w-full object-contain bg-slate-950"
-                unoptimized
-              />
-            </a>
-          </div>
-        )}
 
         <div className="space-y-2">
           <p className="text-sm font-medium text-slate-300">POV na YouTube</p>

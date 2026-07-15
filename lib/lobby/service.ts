@@ -36,7 +36,6 @@ import {
   isTestBotUid,
   TEST_BOT_DEFINITIONS,
 } from "@/lib/lobby/test-bots";
-import { uploadLobbyRoundScreenshot } from "@/lib/firebase/storage";
 import {
   Lobby,
   LobbyPlayer,
@@ -1023,7 +1022,7 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
 export async function updateRoundMedia(
   lobbyId: string,
   roundNumber: number,
-  data: { screenshotUrl?: string; youtubeUrl?: string }
+  data: { youtubeUrl?: string }
 ) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   const snap = await getDoc(lobbyRef);
@@ -1038,16 +1037,6 @@ export async function updateRoundMedia(
     roundHistory,
     updatedAt: serverTimestamp(),
   });
-}
-
-export async function uploadRoundScreenshot(
-  lobbyId: string,
-  roundNumber: number,
-  file: File
-) {
-  const screenshotUrl = await uploadLobbyRoundScreenshot(lobbyId, roundNumber, file);
-  await updateRoundMedia(lobbyId, roundNumber, { screenshotUrl });
-  return screenshotUrl;
 }
 
 export async function startNextRound(lobbyId: string) {

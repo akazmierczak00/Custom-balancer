@@ -1,14 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Image from "next/image";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   endLobbySession,
   setWinner,
   startNextRound,
-  uploadRoundScreenshot,
 } from "@/lib/lobby/service";
 import { Lobby } from "@/types";
 
@@ -19,8 +17,6 @@ interface PostGamePanelProps {
 
 export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentRound = lobby.roundHistory?.[lobby.roundHistory.length - 1];
   const roundNumber = currentRound?.roundNumber;
@@ -33,19 +29,6 @@ export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
       alert(e instanceof Error ? e.message : "Błąd");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleScreenshot = async (file: File) => {
-    if (!roundNumber) return;
-    setUploading(true);
-    try {
-      await uploadRoundScreenshot(lobby.id, roundNumber, file);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Błąd wgrywania screenshota");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -99,60 +82,13 @@ export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
             {lobby.winnerTeam ? `Team ${lobby.winnerTeam} wygrywa` : "wynik zapisany"}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm text-slate-400">Screenshot z wynikami gry</p>
-            {currentRound?.screenshotUrl ? (
-              <a
-                href={currentRound.screenshotUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block overflow-hidden rounded-lg border border-slate-700"
-              >
-                <Image
-                  src={currentRound.screenshotUrl}
-                  alt={`Screenshot rundy ${roundNumber}`}
-                  width={800}
-                  height={450}
-                  className="h-auto max-h-64 w-full object-contain bg-slate-950"
-                  unoptimized
-                />
-              </a>
-            ) : (
-              <p className="text-sm text-slate-500">Brak screenshota — możesz dodać przed kolejną rundą.</p>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleScreenshot(file);
-              }}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={uploading || !roundNumber}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading
-                ? "Wgrywanie..."
-                : currentRound?.screenshotUrl
-                  ? "Zmień screenshot"
-                  : "Wgraj screenshot"}
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handleStartNextRound} disabled={loading}>
-              Zacznij kolejną rundę
-            </Button>
-            <Button variant="secondary" onClick={handleEndSession} disabled={loading}>
-              Zakończ sesję
-            </Button>
-          </div>
+        <CardContent className="flex flex-wrap gap-3">
+          <Button onClick={handleStartNextRound} disabled={loading}>
+            Zacznij kolejną rundę
+          </Button>
+          <Button variant="secondary" onClick={handleEndSession} disabled={loading}>
+            Zakończ sesję
+          </Button>
         </CardContent>
       </Card>
     );
@@ -167,24 +103,7 @@ export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {currentRound?.screenshotUrl && (
-            <a
-              href={currentRound.screenshotUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block overflow-hidden rounded-lg border border-slate-700"
-            >
-              <Image
-                src={currentRound.screenshotUrl}
-                alt={`Screenshot rundy ${roundNumber}`}
-                width={800}
-                height={450}
-                className="h-auto max-h-64 w-full object-contain bg-slate-950"
-                unoptimized
-              />
-            </a>
-          )}
-          <p className="mt-3 text-sm text-slate-400">
+          <p className="text-sm text-slate-400">
             Admin przygotowuje kolejną rundę lub kończy sesję.
           </p>
         </CardContent>

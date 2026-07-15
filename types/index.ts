@@ -128,7 +128,6 @@ export interface LobbyRoundRecord {
   team2: PlayerAssignment[];
   winnerTeam: 1 | 2;
   selectedWeaknesses: SelectedWeakness[];
-  screenshotUrl?: string;
   youtubeUrl?: string;
   completedAt: Timestamp;
 }

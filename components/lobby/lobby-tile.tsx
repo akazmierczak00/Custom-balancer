@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,24 +150,15 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
                     <p className="text-sm font-medium">
                       Runda {round.roundNumber} — Team {round.winnerTeam} wygrywa
                     </p>
-                    {round.screenshotUrl ? (
+                    {round.youtubeUrl && (
                       <a
-                        href={round.screenshotUrl}
+                        href={round.youtubeUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 block overflow-hidden rounded border border-slate-700"
+                        className="mt-2 inline-block text-xs text-indigo-400 hover:text-indigo-300"
                       >
-                        <Image
-                          src={round.screenshotUrl}
-                          alt={`Screenshot rundy ${round.roundNumber}`}
-                          width={320}
-                          height={180}
-                          className="h-24 w-full object-cover"
-                          unoptimized
-                        />
+                        POV na YouTube
                       </a>
-                    ) : (
-                      <p className="mt-2 text-xs text-slate-500">Brak screenshota</p>
                     )}
                   </div>
                 ))}
