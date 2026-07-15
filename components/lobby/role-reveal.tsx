@@ -10,6 +10,7 @@ interface RoleRevealProps {
   proposal?: TeamProposal | null;
   dual?: boolean;
   currentUid?: string;
+  showRolePriorities?: boolean;
 }
 
 interface RoleRevealRowProps {
@@ -19,6 +20,7 @@ interface RoleRevealRowProps {
   highlighted?: boolean;
   compact?: boolean;
   currentUid?: string;
+  showRolePriorities?: boolean;
 }
 
 function RoleRevealRow({
@@ -28,6 +30,7 @@ function RoleRevealRow({
   highlighted,
   compact,
   currentUid,
+  showRolePriorities = false,
 }: RoleRevealRowProps) {
   const p1 = team1.find((p) => p.role === role);
   const p2 = team2.find((p) => p.role === role);
@@ -49,6 +52,7 @@ function RoleRevealRow({
           isCurrentUser={p1?.uid === currentUid}
           mirrored
           compact={compact}
+          showRolePriorities={showRolePriorities}
           className="h-full"
         />
       </div>
@@ -68,6 +72,7 @@ function RoleRevealRow({
           role={role}
           isCurrentUser={p2?.uid === currentUid}
           compact={compact}
+          showRolePriorities={showRolePriorities}
           className="h-full"
         />
       </div>
@@ -85,6 +90,7 @@ interface ProposalRevealColumnProps {
   currentRole: LoLRole;
   compact?: boolean;
   currentUid?: string;
+  showRolePriorities?: boolean;
 }
 
 function ProposalRevealColumn({
@@ -97,6 +103,7 @@ function ProposalRevealColumn({
   currentRole,
   compact = false,
   currentUid,
+  showRolePriorities = false,
 }: ProposalRevealColumnProps) {
   return (
     <div
@@ -117,6 +124,7 @@ function ProposalRevealColumn({
             highlighted={role === currentRole}
             compact={compact}
             currentUid={currentUid}
+            showRolePriorities={showRolePriorities}
           />
         ))}
       </div>
@@ -129,6 +137,7 @@ export function RoleReveal({
   proposal,
   dual = false,
   currentUid,
+  showRolePriorities = false,
 }: RoleRevealProps) {
   const roleIndex = lobby.revealRoleIndex;
   const currentRole = REVEAL_ROLE_ORDER[roleIndex];
@@ -140,16 +149,17 @@ export function RoleReveal({
     return (
       <div className="grid gap-10 md:grid-cols-2 md:gap-16">
         <ProposalRevealColumn
-            label="Propozycja A"
-            labelClassName="text-indigo-300"
-            borderClassName="border-indigo-500/30"
-            team1={lobby.proposalA.team1}
-            team2={lobby.proposalA.team2}
-            revealedRoles={revealedRoles}
-            currentRole={currentRole}
-            compact
-            currentUid={currentUid}
-          />
+          label="Propozycja A"
+          labelClassName="text-indigo-300"
+          borderClassName="border-indigo-500/30"
+          team1={lobby.proposalA.team1}
+          team2={lobby.proposalA.team2}
+          revealedRoles={revealedRoles}
+          currentRole={currentRole}
+          compact
+          currentUid={currentUid}
+          showRolePriorities={showRolePriorities}
+        />
         <ProposalRevealColumn
           label="Propozycja B"
           labelClassName="text-purple-300"
@@ -160,6 +170,7 @@ export function RoleReveal({
           currentRole={currentRole}
           compact
           currentUid={currentUid}
+          showRolePriorities={showRolePriorities}
         />
       </div>
     );
@@ -183,6 +194,7 @@ export function RoleReveal({
           team2={team2}
           highlighted={role === currentRole}
           currentUid={currentUid}
+          showRolePriorities={showRolePriorities}
         />
       ))}
     </div>

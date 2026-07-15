@@ -102,7 +102,7 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
             </Button>
           )}
           {(isJoined || isCompleted) && (
-            <Button size="sm" variant="secondary" asChild>
+            <Button size="sm" variant="outline" asChild>
               <a href={`/lobby/${lobby.id}`}>{isCompleted ? "Podsumowanie" : "Wejdź"}</a>
             </Button>
           )}

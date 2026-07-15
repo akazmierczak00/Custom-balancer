@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { AdminLobbyControls } from "@/components/lobby/admin-lobby-controls";
@@ -53,6 +54,8 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const [weaknessLoading, setWeaknessLoading] = useState(false);
   const [adminActingAsSelector, setAdminActingAsSelector] = useState(false);
   const [showChampionPoolReveal, setShowChampionPoolReveal] = useState(false);
+  const [viewAsUser, setViewAsUser] = useState(false);
+  const adminView = isAdmin && !viewAsUser;
 
   const championPool = lobby.weaknesses?.championPool;
 
@@ -75,14 +78,39 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const showConfirmPopup =
     lobby.status === "confirming" && isLobbyFull && remaining > 0;
 
-  useEffect(() => {
-    if (!lobby.slots.includes(profile.uid)) return;
+  const isJoined = lobby.slots.includes(profile.uid);
+  const presenceEpochRef = useRef(0);
 
-    void enterLobbyRoom(lobby.id, profile.uid);
+  useEffect(() => {
+    if (!isJoined || lobby.status !== "open") return;
+
+    const epoch = ++presenceEpochRef.current;
+    const lobbyId = lobby.id;
+    const uid = profile.uid;
+
+    void enterLobbyRoom(lobbyId, uid);
+
     return () => {
-      void exitLobbyRoom(lobby.id, profile.uid);
+      // Delay exit so React Strict Mode remount can re-enter first and win.
+      window.setTimeout(() => {
+        if (presenceEpochRef.current !== epoch) return;
+        void exitLobbyRoom(lobbyId, uid);
+      }, 250);
     };
-  }, [lobby.id, profile.uid]);
+  }, [lobby.id, profile.uid, isJoined, lobby.status]);
+
+  // If presence was lost (e.g. race) while still in the open lobby room, re-mark it.
+  useEffect(() => {
+    if (lobby.status !== "open" || !isJoined) return;
+    if (lobby.presentUids?.[profile.uid]) return;
+    void enterLobbyRoom(lobby.id, profile.uid);
+  }, [
+    lobby.status,
+    lobby.id,
+    isJoined,
+    profile.uid,
+    lobby.presentUids,
+  ]);
 
   useEffect(() => {
     if (lobby.status !== "open" || !isLobbyFull || playersInRoom < 10) return;
@@ -172,24 +200,24 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   ]);
 
   useEffect(() => {
-    if (lobby.status !== "weakness_pick") {
+    if (lobby.status !== "weakness_pick" || viewAsUser) {
       setAdminActingAsSelector(false);
     }
-  }, [lobby.status]);
+  }, [lobby.status, viewAsUser]);
 
   const selectorUid = lobby.weaknesses?.selectorUid ?? null;
   const selectorPlayer = [...lobby.team1, ...lobby.team2].find(
     (player) => player.uid === selectorUid
   );
   const canAdminActAsSelector =
-    isAdmin &&
+    adminView &&
     lobby.status === "weakness_pick" &&
     !!selectorUid &&
     selectorUid !== profile.uid;
   const isActingAsSelector =
-    selectorUid === profile.uid || (isAdmin && adminActingAsSelector);
+    selectorUid === profile.uid || (adminView && adminActingAsSelector);
   const getWeaknessActingUid = () =>
-    isAdmin && adminActingAsSelector && selectorUid ? selectorUid : profile.uid;
+    adminView && adminActingAsSelector && selectorUid ? selectorUid : profile.uid;
 
   const lineupResultText =
     lobby.status === "overview" && lobby.votes.locked
@@ -199,7 +227,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       : undefined;
 
   const canStartLineupVoting =
-    lobby.status === "overview" && !lobby.votes?.locked && isAdmin;
+    lobby.status === "overview" && !lobby.votes?.locked && adminView;
 
   const showTeamOverview =
     lobby.status !== "session_summary" &&
@@ -278,6 +306,29 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         onComplete={() => setShowChampionPoolReveal(false)}
       />
     )}
+    {isAdmin && (
+      <div className="fixed bottom-4 right-16 z-40 sm:right-20">
+        <Button
+          type="button"
+          size="sm"
+          variant={viewAsUser ? "default" : "outline"}
+          className="shadow-lg"
+          onClick={() => setViewAsUser((value) => !value)}
+        >
+          {viewAsUser ? (
+            <>
+              <Eye className="mr-2 h-4 w-4" />
+              Widok admina
+            </>
+          ) : (
+            <>
+              <EyeOff className="mr-2 h-4 w-4" />
+              Widok użytkownika
+            </>
+          )}
+        </Button>
+      </div>
+    )}
     <div className="mx-auto max-w-6xl space-y-8 p-4">
       <div className="flex items-center justify-between">
         <div>
@@ -288,16 +339,16 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          {isAdmin && <AdminLobbyControls lobby={lobby} />}
+          {adminView && <AdminLobbyControls lobby={lobby} />}
           <div className="flex items-center gap-3">
-          {lobby.status === "open" && isAdmin && filledSlots < 10 && (
+          {lobby.status === "open" && adminView && filledSlots < 10 && (
             <Button variant="outline" size="sm" onClick={handleFillTestBots}>
               Wypełnij botami (test)
             </Button>
           )}
           {remaining > 0 &&
             ((lobby.status === "reveal" && lobby.revealRoleIndex < 0) ||
-              (isAdmin &&
+              (adminView &&
                 (lobby.status === "reveal" || lobby.status === "reshuffle_reveal"))) && (
             <div className="text-right">
               <p className="text-3xl font-bold text-indigo-400">{remaining}s</p>
@@ -318,7 +369,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       <ConfirmPopup
         lobby={lobby}
         currentUid={profile.uid}
-        isAdmin={isAdmin}
+        isAdmin={adminView}
         open={showConfirmPopup}
       />
 
@@ -326,7 +377,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         <LobbyParticipants
           lobby={lobby}
           currentUid={profile.uid}
-          isAdmin={isAdmin}
+          isAdmin={adminView}
           showConfirmActions={showConfirmPopup}
           playersInRoom={playersInRoom}
         />
@@ -336,7 +387,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         <p className="text-center text-slate-400">Losowanie składów...</p>
       )}
 
-      {isAdmin && isLobbyFull && lobby.status === "confirming" && remaining === 0 && (
+      {adminView && isLobbyFull && lobby.status === "confirming" && remaining === 0 && (
         <div className="flex justify-center">
           <Button onClick={() => restartConfirmTimer(lobby.id)}>
             Uruchom ponownie timer akceptacji
@@ -345,17 +396,27 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       )}
 
       {lobby.status === "reveal" && lobby.revealRoleIndex >= 0 && (
-        <RoleReveal lobby={lobby} currentUid={profile.uid} />
+        <RoleReveal
+          lobby={lobby}
+          currentUid={profile.uid}
+          showRolePriorities={adminView}
+        />
       )}
 
       {lobby.status === "reshuffle_reveal" && (
-        <RoleReveal lobby={lobby} dual currentUid={profile.uid} />
+        <RoleReveal
+          lobby={lobby}
+          dual
+          currentUid={profile.uid}
+          showRolePriorities={adminView}
+        />
       )}
 
       {showTeamOverview && (
         <TeamOverview
           lobby={lobby}
           currentUid={profile.uid}
+          showRolePriorities={adminView}
           votes={
             lobby.status === "voting_lineup" || lobby.status === "locked_lineup"
               ? lobby.votes.lineup
@@ -379,7 +440,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           locked={lobby.votes.locked}
           remaining={remaining}
           resultText={lineupResultText}
-          isAdmin={isAdmin}
+          isAdmin={adminView}
         />
       )}
 
@@ -390,11 +451,11 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           currentUid={profile.uid}
           locked={lobby.votes.locked}
           remaining={remaining}
-          isAdmin={isAdmin}
+          isAdmin={adminView}
         />
       )}
 
-      {canStartWeaknessReveal && isAdmin && (
+      {canStartWeaknessReveal && adminView && (
           <div className="flex justify-center">
             <Button onClick={handleStartWeaknessReveal} disabled={weaknessLoading}>
               {weaknessLoading ? "Losowanie..." : "Losuj osłabienia Adriana"}
@@ -421,7 +482,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             selectable={lobby.status === "weakness_pick"}
             onSelect={handleWeaknessSelect}
             currentUid={profile.uid}
-            actAsSelector={isAdmin && adminActingAsSelector}
+            actAsSelector={adminView && adminActingAsSelector}
           />
           {lobby.status === "weakness_pick" && isActingAsSelector && (
             <div className="flex justify-center">
@@ -439,10 +500,10 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       )}
 
       {lobby.status === "session_summary" && (
-        <SessionSummaryPanel lobby={lobby} isAdmin={isAdmin} />
+        <SessionSummaryPanel lobby={lobby} isAdmin={adminView} />
       )}
 
-      <PostGamePanel lobby={lobby} isAdmin={isAdmin} />
+      <PostGamePanel lobby={lobby} isAdmin={adminView} />
     </div>
     </LobbyUsersProvider>
   );

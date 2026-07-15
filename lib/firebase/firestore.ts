@@ -2,9 +2,7 @@ import {
   collection,
   doc,
   documentId,
-  limit,
   onSnapshot,
-  orderBy,
   query,
   Unsubscribe,
   where,
@@ -76,17 +74,23 @@ export function subscribeToActiveLobbies(
 export function subscribeToCompletedLobbies(
   callback: (lobbies: Lobby[]) => void
 ): Unsubscribe {
+  // Equality-only query avoids a composite index; sort + limit on the client.
   const q = query(
     collection(getFirebaseDb(), "lobbies"),
-    where("status", "in", ["session_summary"]),
-    orderBy("updatedAt", "desc"),
-    limit(COMPLETED_LOBBIES_LIMIT)
+    where("status", "==", "session_summary")
   );
 
   return onSnapshot(q, (snap) => {
-    callback(
-      snap.docs.map((d) => normalizeLobby({ id: d.id, ...d.data() } as Lobby))
-    );
+    const lobbies = snap.docs
+      .map((d) => normalizeLobby({ id: d.id, ...d.data() } as Lobby))
+      .sort((a, b) => {
+        const aMs = a.updatedAt?.toMillis?.() ?? 0;
+        const bMs = b.updatedAt?.toMillis?.() ?? 0;
+        return bMs - aMs;
+      })
+      .slice(0, COMPLETED_LOBBIES_LIMIT);
+
+    callback(lobbies);
   });
 }
 

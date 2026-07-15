@@ -136,6 +136,7 @@ export function LobbyParticipants({
               player={uid ? resolvedUsers[uid] : undefined}
               isCurrentUser={uid === currentUid}
               isPresent={isPresent}
+              showRolePriorities={isAdmin}
             />
           );
         })}

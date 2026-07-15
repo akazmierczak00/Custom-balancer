@@ -16,6 +16,7 @@ interface PlayerBannerProps {
   isPresent?: boolean;
   mirrored?: boolean;
   compact?: boolean;
+  showRolePriorities?: boolean;
   className?: string;
 }
 
@@ -50,6 +51,7 @@ export function PlayerBanner({
   isPresent = false,
   mirrored = false,
   compact = false,
+  showRolePriorities = false,
   className,
 }: PlayerBannerProps) {
   if (!player) {
@@ -79,19 +81,22 @@ export function PlayerBanner({
   const winRate = getWinRatePercent(player);
 
   const rankLabel = rank ? getRankLabel(rank as never) : "Brak rangi";
-  const rolePrioritiesLine = rolePrioritiesLabel
-    ? mirrored
-      ? rolePrioritiesLabel.split(" > ").reverse().join(" < ")
-      : rolePrioritiesLabel
-    : legacyRolePriorities
-      ? mirrored
-        ? [...legacyRolePriorities]
-            .sort((a, b) => b.priority - a.priority)
-            .map((group) =>
-              group.roles.map((r) => getRoleLabel(r).toUpperCase()).join(" = ")
-            )
-            .join(" < ")
-        : formatRolePriorities(legacyRolePriorities)
+  const rolePrioritiesLine =
+    showRolePriorities && !compact
+      ? rolePrioritiesLabel
+        ? mirrored
+          ? rolePrioritiesLabel.split(" > ").reverse().join(" < ")
+          : rolePrioritiesLabel
+        : legacyRolePriorities
+          ? mirrored
+            ? [...legacyRolePriorities]
+                .sort((a, b) => b.priority - a.priority)
+                .map((group) =>
+                  group.roles.map((r) => getRoleLabel(r).toUpperCase()).join(" = ")
+                )
+                .join(" < ")
+            : formatRolePriorities(legacyRolePriorities)
+          : null
       : null;
 
   return (
@@ -134,7 +139,7 @@ export function PlayerBanner({
           <p className={cn("text-xs text-slate-400", compact && "text-[10px]")}>
             {rankLabel}
           </p>
-          {rolePrioritiesLine && !compact && (
+          {rolePrioritiesLine && (
             <p className="mt-1 text-xs text-indigo-300">{rolePrioritiesLine}</p>
           )}
         </div>

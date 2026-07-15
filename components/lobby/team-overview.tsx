@@ -18,6 +18,7 @@ interface TeamOverviewProps {
   currentUid?: string;
   winnerTeam?: 1 | 2;
   useLiveStats?: boolean;
+  showRolePriorities?: boolean;
 }
 
 function enrichPlayer(
@@ -44,6 +45,7 @@ export function TeamOverview({
   currentUid,
   winnerTeam,
   useLiveStats = true,
+  showRolePriorities = false,
 }: TeamOverviewProps) {
   const team1 = team1Override ?? lobby.team1;
   const team2 = team2Override ?? lobby.team2;
@@ -107,6 +109,7 @@ export function TeamOverview({
                 isCurrentUser={p1?.uid === currentUid}
                 mirrored
                 compact={compact}
+                showRolePriorities={showRolePriorities}
                 className="h-full"
               />
             </div>
@@ -127,6 +130,7 @@ export function TeamOverview({
                 voted={p2 ? !!votes?.[p2.uid] : false}
                 isCurrentUser={p2?.uid === currentUid}
                 compact={compact}
+                showRolePriorities={showRolePriorities}
                 className="h-full"
               />
             </div>

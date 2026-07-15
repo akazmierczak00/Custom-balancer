@@ -56,6 +56,7 @@ export function ProposalVotePanel({
                 lobby={{ ...lobby, team1: lobby.proposalA.team1, team2: lobby.proposalA.team2 }}
                 compact
                 currentUid={currentUid}
+                showRolePriorities={isAdmin}
               />
             )}
           </div>
@@ -66,6 +67,7 @@ export function ProposalVotePanel({
                 lobby={{ ...lobby, team1: lobby.proposalB.team1, team2: lobby.proposalB.team2 }}
                 compact
                 currentUid={currentUid}
+                showRolePriorities={isAdmin}
               />
             )}
           </div>

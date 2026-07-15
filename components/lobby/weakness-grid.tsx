@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChampionListCollapsible } from "@/components/lobby/champion-list-collapsible";
 import { getRevealIntensity, WEAKNESS_GRID_COLS } from "@/lib/algorithms/drawWeaknesses";
 import { isNarrowChampionPoolWeakness } from "@/lib/champions/narrow-pool";
-import { ChampionListCollapsible } from "@/components/lobby/champion-list-collapsible";
+import { cn } from "@/lib/utils";
 import { LobbyWeaknesses } from "@/types";
 
 interface WeaknessGridProps {
@@ -32,6 +33,10 @@ export function WeaknessGrid({
     (weaknesses.selectorUid === currentUid || actAsSelector);
   const canSelect = selectable && isSelector && !weaknesses.confirmed;
   const pointsRemaining = weaknesses.pointsTotal - weaknesses.pointsSpent;
+  const pointsSpent = weaknesses.pointsSpent;
+  const pointsTotal = weaknesses.pointsTotal;
+  const pointsProgress =
+    pointsTotal > 0 ? Math.min(100, (pointsSpent / pointsTotal) * 100) : 0;
 
   const isCellSelected = (cell: (typeof weaknesses.drawn)[number]) =>
     weaknesses.selected.some(
@@ -76,94 +81,160 @@ export function WeaknessGrid({
     );
 
     return (
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-amber-300">Wybrane osłabienia Adriana</h3>
-        {weaknesses.selected.map((s) => (
-          <p key={`${s.weaknessId}-${s.tier}`} className="text-slate-200">
-            Tier {s.tier}: <strong>{s.name}</strong> — {s.text}
+      <Card className="overflow-hidden border-amber-500/25 bg-slate-900/60">
+        <CardHeader className="border-b border-amber-500/15 pb-4">
+          <CardTitle className="text-xl text-amber-300">
+            Wybrane osłabienia Adriana
+          </CardTitle>
+          <p className="text-sm text-slate-400">
+            Finalny zestaw osłabień na tę rundę
           </p>
-        ))}
-        {hasNarrowChampionPool && weaknesses.championPool && (
-          <ChampionListCollapsible championPool={weaknesses.championPool} />
-        )}
-      </div>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-5">
+          {weaknesses.selected.map((s) => (
+            <div
+              key={`${s.weaknessId}-${s.tier}`}
+              className="rounded-xl border border-amber-500/20 bg-amber-950/15 px-4 py-3"
+            >
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+                  Tier {s.tier}
+                </span>
+                <p className="font-semibold text-slate-100">{s.name}</p>
+              </div>
+              <p className="mt-1.5 text-sm leading-snug text-slate-400">{s.text}</p>
+            </div>
+          ))}
+          {hasNarrowChampionPool && weaknesses.championPool && (
+            <div className="border-t border-slate-800 pt-3">
+              <ChampionListCollapsible championPool={weaknesses.championPool} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-amber-300">Osłabienia Adriana</h3>
-        {selectable && (
-          <p className="text-sm font-medium text-amber-200">
-            Punkty do wydania: {pointsRemaining}
-          </p>
-        )}
-      </div>
-      {pointsError && (
-        <p className="text-center text-sm font-semibold text-red-400">
-          Za mało punktów do wydania
+    <Card className="overflow-hidden border-amber-500/25 bg-slate-900/60">
+      <CardHeader className="border-b border-amber-500/15 pb-4">
+        <CardTitle className="text-xl text-amber-300">Osłabienia Adriana</CardTitle>
+        <p className="text-sm text-slate-400">
+          {selectable
+            ? canSelect
+              ? "Wybierz osłabienia, wydając wszystkie punkty"
+              : "Trwa wybór osłabień przez selektora"
+            : "Losowanie kart osłabień"}
         </p>
-      )}
-      <div className="space-y-2.5">
-        {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) => (
-          <div key={rowIdx} className="space-y-1.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              Tier {rowIdx + 1}
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: WEAKNESS_GRID_COLS }, (_, colIdx) => {
-                const cell = weaknesses.drawn[rowIdx * WEAKNESS_GRID_COLS + colIdx];
-                if (!cell) return null;
+      </CardHeader>
 
-                const selected = isCellSelected(cell);
-                const cellKey = `${rowIdx}-${colIdx}`;
-                const isFlashing = flashCell === cellKey;
-
-                return (
-                  <button
-                    key={cellKey}
-                    type="button"
-                    disabled={!canSelect || !cell.revealed}
-                    onClick={() => void handleCellClick(rowIdx, colIdx)}
-                    className={cn(
-                      "min-h-14 rounded-md border border-slate-700/60 bg-slate-800/60 p-2 text-left text-sm transition-all",
-                      !cell.revealed && "opacity-30",
-                      cell.revealed && !isFlashing && getRevealIntensity(cell.rarity),
-                      isFlashing &&
-                        "border-red-500/50 bg-red-950/40 ring-1 ring-red-500/40",
-                      selected &&
-                        !isFlashing &&
-                        "border-amber-500/35 bg-amber-500/10 ring-1 ring-amber-400/25",
-                      canSelect &&
-                        cell.revealed &&
-                        !isFlashing &&
-                        (selected
-                          ? "hover:border-slate-500/60 hover:bg-slate-700/60"
-                          : "hover:border-amber-500/30 hover:bg-amber-500/5")
-                    )}
-                  >
-                    {cell.revealed ? (
-                      <>
-                        <p className="text-xs font-semibold leading-tight">{cell.name}</p>
-                        <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{cell.text}</p>
-                        {selected && (
-                          <p className="mt-1 text-[10px] font-semibold text-amber-400/80">
-                            Wybrane · {cell.tier} pkt
-                            {canSelect && " · kliknij, aby odznaczyć"}
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-center text-[11px] text-slate-500">?</p>
-                    )}
-                  </button>
-                );
-              })}
+      <CardContent className="space-y-5 pt-5">
+        {selectable && (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-950/15 px-4 py-3">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-400/80">
+                  Punkty do wydania
+                </p>
+                <p className="mt-1 text-3xl font-bold tabular-nums text-amber-200">
+                  {pointsRemaining}
+                  <span className="ml-1 text-base font-medium text-amber-400/60">
+                    / {pointsTotal}
+                  </span>
+                </p>
+              </div>
+              <p className="pb-1 text-sm tabular-nums text-slate-400">
+                Wydano {pointsSpent}
+              </p>
+            </div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-900/80">
+              <div
+                className="h-full rounded-full bg-amber-400/70 transition-all duration-500"
+                style={{ width: `${pointsProgress}%` }}
+              />
             </div>
           </div>
-        ))}
-      </div>
-    </div>
+        )}
+
+        {pointsError && (
+          <div className="rounded-lg border border-red-500/30 bg-red-950/30 px-3 py-2 text-center text-sm font-semibold text-red-300">
+            Za mało punktów do wydania
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) => (
+            <div key={rowIdx} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-300">
+                  Tier {rowIdx + 1}
+                </span>
+                <span className="text-[11px] text-slate-500">{rowIdx + 1} pkt</span>
+                <div className="h-px flex-1 bg-slate-800" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                {Array.from({ length: WEAKNESS_GRID_COLS }, (_, colIdx) => {
+                  const cell =
+                    weaknesses.drawn[rowIdx * WEAKNESS_GRID_COLS + colIdx];
+                  if (!cell) return null;
+
+                  const selected = isCellSelected(cell);
+                  const cellKey = `${rowIdx}-${colIdx}`;
+                  const isFlashing = flashCell === cellKey;
+
+                  return (
+                    <button
+                      key={cellKey}
+                      type="button"
+                      disabled={!canSelect || !cell.revealed}
+                      onClick={() => void handleCellClick(rowIdx, colIdx)}
+                      className={cn(
+                        "min-h-[5rem] rounded-xl border border-slate-700/70 bg-slate-800/50 p-3 text-left transition-all",
+                        !cell.revealed &&
+                          "flex items-center justify-center border-dashed opacity-40",
+                        cell.revealed &&
+                          !isFlashing &&
+                          getRevealIntensity(cell.rarity),
+                        isFlashing &&
+                          "border-red-500/50 bg-red-950/40 ring-1 ring-red-500/40",
+                        selected &&
+                          !isFlashing &&
+                          "border-amber-500/45 bg-amber-500/10 ring-1 ring-amber-400/30",
+                        canSelect &&
+                          cell.revealed &&
+                          !isFlashing &&
+                          (selected
+                            ? "hover:border-slate-500/60 hover:bg-slate-800/70"
+                            : "hover:border-amber-500/35 hover:bg-amber-500/5")
+                      )}
+                    >
+                      {cell.revealed ? (
+                        <>
+                          <p className="text-sm font-semibold leading-tight text-slate-100">
+                            {cell.name}
+                          </p>
+                          <p className="mt-1.5 text-xs leading-snug text-slate-400">
+                            {cell.text}
+                          </p>
+                          {selected && (
+                            <p className="mt-2 text-[11px] font-semibold text-amber-400/90">
+                              Wybrane · {cell.tier} pkt
+                              {canSelect && " · kliknij, aby odznaczyć"}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-lg font-semibold text-slate-500">?</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
