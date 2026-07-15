@@ -1052,7 +1052,7 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
           team2: toFirestoreTeam(team2),
           winnerTeam: team,
           selectedWeaknesses: lobby.weaknesses?.selected ?? [],
-          completedAt: serverTimestamp(),
+          completedAt: Timestamp.now(),
         },
       ],
       updatedAt: serverTimestamp(),
