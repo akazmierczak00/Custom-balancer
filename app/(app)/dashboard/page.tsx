@@ -62,6 +62,14 @@ export default function DashboardPage() {
     return subscribeToAllUsers(setAllUsers);
   }, [profile?.role, usersOpen]);
 
+  const isAdmin = profile?.role === "admin";
+
+  useEffect(() => {
+    if (!isAdmin && activeTab === "champions") {
+      setActiveTab("lobby");
+    }
+  }, [isAdmin, activeTab]);
+
   const handleCreateLobby = async () => {
     if (!profile) return;
     setCreating(true);
@@ -98,7 +106,7 @@ export default function DashboardPage() {
           <Link href="/admin/weaknesses">Osłabienia Adriana</Link>
         </Button>
       )}
-      {profile.role === "admin" && (
+      {isAdmin && (
         <Button onClick={handleCreateLobby} disabled={creating}>
           {creating ? "Tworzenie..." : "Utwórz lobby"}
         </Button>
@@ -136,16 +144,18 @@ export default function DashboardPage() {
         >
           Lobby
         </Button>
-        <Button
-          type="button"
-          variant={activeTab === "champions" ? "default" : "outline"}
-          onClick={() => setActiveTab("champions")}
-        >
-          Champions
-        </Button>
+        {isAdmin && (
+          <Button
+            type="button"
+            variant={activeTab === "champions" ? "default" : "outline"}
+            onClick={() => setActiveTab("champions")}
+          >
+            Champions
+          </Button>
+        )}
       </div>
 
-      {activeTab === "champions" ? (
+      {isAdmin && activeTab === "champions" ? (
         <DashboardChampionsPanel />
       ) : (
         <>
