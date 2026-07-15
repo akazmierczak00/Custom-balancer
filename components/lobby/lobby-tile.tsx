@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerBanner } from "@/components/profile/player-banner";
 import { RoundLineupCompact } from "@/components/lobby/round-lineup-compact";
+import { formatLobbyPlayedDate } from "@/lib/lobby/format";
 import { joinLobby, leaveLobby, fillLobbyWithTestBots, deleteLobby } from "@/lib/lobby/service";
 import { Lobby, UserProfile } from "@/types";
 
@@ -24,6 +25,7 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
   const isAdmin = currentUser.role === "admin";
   const isCompleted = lobby.status === "session_summary";
   const roundCount = lobby.roundHistory?.length ?? 0;
+  const playedDate = isCompleted ? formatLobbyPlayedDate(lobby) : null;
 
   const handleJoin = async () => {
     setLoading(true);
@@ -79,7 +81,7 @@ export function LobbyTile({ lobby, currentUser, users }: LobbyTileProps) {
           <CardTitle>Lobby #{lobby.id.slice(0, 6)}</CardTitle>
           <p className="text-sm text-slate-400">
             {isCompleted
-              ? `Zakończone · ${roundCount} ${roundCount === 1 ? "runda" : "rund"}`
+              ? `Zakończone · ${roundCount} ${roundCount === 1 ? "runda" : "rund"}${playedDate ? ` · ${playedDate}` : ""}`
               : `Status: ${lobby.status} · ${filled}/10`}
           </p>
         </div>

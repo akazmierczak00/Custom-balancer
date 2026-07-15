@@ -16,6 +16,7 @@ interface TeamOverviewProps {
   compact?: boolean;
   currentUid?: string;
   winnerTeam?: 1 | 2;
+  useLiveStats?: boolean;
 }
 
 function enrichPlayer(
@@ -41,6 +42,7 @@ export function TeamOverview({
   compact = false,
   currentUid,
   winnerTeam,
+  useLiveStats = true,
 }: TeamOverviewProps) {
   const team1 = team1Override ?? lobby.team1;
   const team2 = team2Override ?? lobby.team2;
@@ -53,8 +55,15 @@ export function TeamOverview({
   );
 
   useEffect(() => {
+    if (!useLiveStats) {
+      setLiveUsers({});
+      return;
+    }
     return subscribeToUsers(playerUids, setLiveUsers);
-  }, [playerUids]);
+  }, [playerUids, useLiveStats]);
+
+  const resolvePlayer = (player: PlayerAssignment | undefined) =>
+    useLiveStats ? enrichPlayer(player, liveUsers) : player;
 
   return (
     <div className="min-w-0 space-y-3">
@@ -72,14 +81,8 @@ export function TeamOverview({
       </div>
 
       {REVEAL_ROLE_ORDER.map((role) => {
-        const p1 = enrichPlayer(
-          team1.find((player) => player.role === role),
-          liveUsers
-        );
-        const p2 = enrichPlayer(
-          team2.find((player) => player.role === role),
-          liveUsers
-        );
+        const p1 = resolvePlayer(team1.find((player) => player.role === role));
+        const p2 = resolvePlayer(team2.find((player) => player.role === role));
         return (
           <div
             key={role}
