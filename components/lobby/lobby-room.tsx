@@ -343,13 +343,18 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             currentUid={profile.uid}
             actAsSelector={isAdmin && adminActingAsSelector}
           />
-          {lobby.status === "weakness_pick" &&
-            isActingAsSelector &&
-            lobby.weaknesses.pointsSpent === lobby.weaknesses.pointsTotal && (
-              <div className="flex justify-center">
-                <Button onClick={handleConfirmWeaknesses}>Zatwierdź osłabienia</Button>
-              </div>
-            )}
+          {lobby.status === "weakness_pick" && isActingAsSelector && (
+            <div className="flex justify-center">
+              <Button
+                onClick={handleConfirmWeaknesses}
+                disabled={
+                  lobby.weaknesses.pointsSpent !== lobby.weaknesses.pointsTotal
+                }
+              >
+                Zatwierdź osłabienia
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
