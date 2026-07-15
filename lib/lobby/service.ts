@@ -636,6 +636,11 @@ export async function startWeaknessReveal(lobbyId: string) {
   const weaknesses = weaknessesSnap.docs.map(
     (d) => ({ id: d.id, ...d.data() }) as Weakness
   );
+
+  if (weaknesses.length === 0) {
+    throw new Error("Brak osłabień w bazie — dodaj je w panelu admina");
+  }
+
   const drawn = drawWeaknessGrid(weaknesses);
 
   await updateDoc(doc(getFirebaseDb(), "lobbies", lobbyId), {
@@ -836,6 +841,7 @@ export async function restartAfterCooldown(lobbyId: string) {
     status: "reveal",
     revealRoleIndex: 0,
     votes: defaultVotes(),
+    weaknesses: defaultWeaknessesState(),
     winnerTeam: null,
     cooldownMinutes: null,
     cooldownEndsAt: null,

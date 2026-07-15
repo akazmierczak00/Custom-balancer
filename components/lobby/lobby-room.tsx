@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { ConfirmPopup } from "@/components/lobby/confirm-popup";
@@ -38,6 +38,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const isAdmin = profile.role === "admin";
   const remaining = usePhaseTimer(lobby.phaseTimerEndsAt);
   const transitionLock = useRef(false);
+  const [weaknessLoading, setWeaknessLoading] = useState(false);
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
     if (transitionLock.current) return;
@@ -93,6 +94,9 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         }, delay);
         return () => clearTimeout(timer);
       }
+      if (nextIndex >= flat.length && flat.length > 0) {
+        runTransition(() => revealNextWeakness(lobby.id));
+      }
     }
   }, [
     lobby.status,
@@ -118,8 +122,18 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const canStartWeaknessReveal =
     lobby.status === "overview" &&
     lobby.team1.length > 0 &&
-    !lobby.weaknesses.confirmed &&
-    lobby.weaknesses.drawn.length === 0;
+    !lobby.weaknesses?.confirmed;
+
+  const handleStartWeaknessReveal = async () => {
+    setWeaknessLoading(true);
+    try {
+      await startWeaknessReveal(lobby.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd losowania osłabień");
+    } finally {
+      setWeaknessLoading(false);
+    }
+  };
 
   const handleWeaknessSelect = async (row: number, col: number) => {
     const cell = lobby.weaknesses.drawn[row]?.[col];
@@ -248,8 +262,8 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
       {canStartWeaknessReveal && isAdmin && (
           <div className="flex justify-center">
-            <Button onClick={() => startWeaknessReveal(lobby.id)}>
-              Losuj osłabienia Adriana
+            <Button onClick={handleStartWeaknessReveal} disabled={weaknessLoading}>
+              {weaknessLoading ? "Losowanie..." : "Losuj osłabienia Adriana"}
             </Button>
           </div>
         )}

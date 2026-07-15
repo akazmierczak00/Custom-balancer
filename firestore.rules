@@ -69,6 +69,11 @@ service cloud.firestore {
           resource.data.status == 'weakness_pick' &&
           request.auth.uid == resource.data.weaknesses.selectorUid &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['weaknesses', 'status', 'updatedAt'])
+        ) ||
+        (
+          resource.data.status == 'weakness_reveal' &&
+          request.auth.uid in resource.data.slots &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['weaknesses', 'updatedAt'])
         )
       );
       allow delete: if isAdmin();
