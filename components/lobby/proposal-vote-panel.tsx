@@ -72,31 +72,34 @@ export function ProposalVotePanel({
         </div>
 
         {!locked && (
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button
-              variant={myVote === "A" ? "default" : "outline"}
-              onClick={() => vote("A")}
-              disabled={!!myVote}
-            >
-              Głosuj A ({countA})
-            </Button>
-            <Button
-              variant={myVote === "B" ? "secondary" : "outline"}
-              onClick={() => vote("B")}
-              disabled={!!myVote}
-            >
-              Głosuj B ({countB})
-            </Button>
-            {isAdmin && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => voteForTeam("A")}>
-                  Team: A
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => voteForTeam("B")}>
-                  Team: B
-                </Button>
-              </>
-            )}
+          <div className="space-y-3">
+            <p className="text-center text-sm text-slate-400">
+              Możesz zmienić głos, dopóki nie odda głosu wszystkich 10 graczy.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button
+                variant={myVote === "A" ? "default" : "outline"}
+                onClick={() => vote("A")}
+              >
+                {myVote === "A" ? "Twój głos: A" : "Głosuj A"} ({countA})
+              </Button>
+              <Button
+                variant={myVote === "B" ? "secondary" : "outline"}
+                onClick={() => vote("B")}
+              >
+                {myVote === "B" ? "Twój głos: B" : "Głosuj B"} ({countB})
+              </Button>
+              {isAdmin && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => voteForTeam("A")}>
+                    Team: A
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => voteForTeam("B")}>
+                    Team: B
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -106,7 +109,8 @@ export function ProposalVotePanel({
           </p>
         )}
         <p className="text-center text-xs text-slate-500">
-          Głosowali: {Object.keys(votes).length}/10
+          Głosowali:{" "}
+          {lobby.slots.filter((uid) => uid && votes[uid]).length}/10
         </p>
       </CardContent>
     </Card>

@@ -682,7 +682,9 @@ export async function castProposalVote(
       proposals: { ...lobby.votes.proposals, [uid]: choice },
     };
 
-    const voteCount = Object.keys(votes.proposals).length;
+    const voteCount = lobby.slots.filter(
+      (slotUid) => slotUid && votes.proposals[slotUid]
+    ).length;
     const updates: Record<string, unknown> = {
       votes,
       updatedAt: serverTimestamp(),
@@ -716,7 +718,9 @@ export async function castProposalVoteForTeam(lobbyId: string, choice: "A" | "B"
     }
 
     const votes = { ...lobby.votes, proposals };
-    const voteCount = Object.keys(proposals).length;
+    const voteCount = lobby.slots.filter(
+      (slotUid) => slotUid && proposals[slotUid]
+    ).length;
     const updates: Record<string, unknown> = {
       votes,
       updatedAt: serverTimestamp(),
