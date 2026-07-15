@@ -84,20 +84,10 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
 
   if (!currentRole) return null;
 
-  const roleHeader = (
-    <div className="text-center">
-      <h2 className="text-4xl font-bold text-indigo-300 md:text-5xl">
-        {getRoleLabel(currentRole)}
-      </h2>
-    </div>
-  );
-
   if (dual && lobby.proposalA && lobby.proposalB) {
     return (
-      <div className="space-y-6">
-        {roleHeader}
-        <div className="grid gap-6 md:grid-cols-2">
-          <ProposalRevealColumn
+      <div className="grid gap-6 md:grid-cols-2">
+        <ProposalRevealColumn
             label="Propozycja A"
             labelClassName="text-indigo-300"
             borderClassName="border-indigo-500/30"
@@ -106,16 +96,15 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
             revealedRoles={revealedRoles}
             currentRole={currentRole}
           />
-          <ProposalRevealColumn
-            label="Propozycja B"
-            labelClassName="text-purple-300"
-            borderClassName="border-purple-500/30"
-            team1={lobby.proposalB.team1}
-            team2={lobby.proposalB.team2}
-            revealedRoles={revealedRoles}
-            currentRole={currentRole}
-          />
-        </div>
+        <ProposalRevealColumn
+          label="Propozycja B"
+          labelClassName="text-purple-300"
+          borderClassName="border-purple-500/30"
+          team1={lobby.proposalB.team1}
+          team2={lobby.proposalB.team2}
+          revealedRoles={revealedRoles}
+          currentRole={currentRole}
+        />
       </div>
     );
   }
@@ -124,24 +113,21 @@ export function RoleReveal({ lobby, proposal, dual = false }: RoleRevealProps) {
   const team2 = proposal?.team2 ?? lobby.team2;
 
   return (
-    <div className="space-y-6">
-      {roleHeader}
-      <div className="space-y-3">
-        <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-center gap-4 text-center">
-          <h3 className="text-xl font-bold text-indigo-300">Team 1</h3>
-          <span className="text-2xl font-bold text-slate-500">VS</span>
-          <h3 className="text-xl font-bold text-purple-300">Team 2</h3>
-        </div>
-        {revealedRoles.map((role) => (
-          <RoleRevealRow
-            key={role}
-            role={role}
-            team1={team1}
-            team2={team2}
-            highlighted={role === currentRole}
-          />
-        ))}
+    <div className="space-y-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-center gap-4 text-center">
+        <h3 className="text-xl font-bold text-indigo-300">Team 1</h3>
+        <span className="text-2xl font-bold text-slate-500">VS</span>
+        <h3 className="text-xl font-bold text-purple-300">Team 2</h3>
       </div>
+      {revealedRoles.map((role) => (
+        <RoleRevealRow
+          key={role}
+          role={role}
+          team1={team1}
+          team2={team2}
+          highlighted={role === currentRole}
+        />
+      ))}
     </div>
   );
 }
