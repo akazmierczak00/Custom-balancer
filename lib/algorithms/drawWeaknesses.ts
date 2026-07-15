@@ -25,12 +25,13 @@ function weightedPick(
 
 export function drawWeaknessGrid(weaknesses: Weakness[]): WeaknessCell[][] {
   const grid: WeaknessCell[][] = [];
-  const used = new Set<string>();
 
   for (const tier of [1, 2, 3] as const) {
     const row: WeaknessCell[] = [];
+    const usedInRow = new Set<string>();
+
     for (let col = 0; col < 3; col++) {
-      const picked = weightedPick(weaknesses, tier, used);
+      const picked = weightedPick(weaknesses, tier, usedInRow);
       if (!picked) {
         row.push({
           weaknessId: `empty-${tier}-${col}`,
@@ -43,7 +44,7 @@ export function drawWeaknessGrid(weaknesses: Weakness[]): WeaknessCell[][] {
         continue;
       }
 
-      used.add(picked.id);
+      usedInRow.add(picked.id);
       const text = getWeaknessTierText(picked, tier)!;
 
       row.push({
@@ -86,8 +87,10 @@ export function getWeaknessCellIndex(row: number, col: number): number {
   return row * WEAKNESS_GRID_COLS + col;
 }
 
-export function getRevealDelay(rarity: number): number {
-  return Math.max(300, (101 - rarity) * 80);
+export const WEAKNESS_REVEAL_DELAY_MS = 1000;
+
+export function getRevealDelay(_rarity?: number): number {
+  return WEAKNESS_REVEAL_DELAY_MS;
 }
 
 export function getRevealIntensity(rarity: number): string {

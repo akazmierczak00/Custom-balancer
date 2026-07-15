@@ -56,38 +56,45 @@ export function WeaknessGrid({
           </p>
         )}
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) =>
-          Array.from({ length: WEAKNESS_GRID_COLS }, (_, colIdx) => {
-            const cell = weaknesses.drawn[rowIdx * WEAKNESS_GRID_COLS + colIdx];
-            if (!cell) return null;
+      <div className="space-y-3">
+        {Array.from({ length: WEAKNESS_GRID_COLS }, (_, rowIdx) => (
+          <div key={rowIdx} className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Tier {rowIdx + 1}
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              {Array.from({ length: WEAKNESS_GRID_COLS }, (_, colIdx) => {
+                const cell = weaknesses.drawn[rowIdx * WEAKNESS_GRID_COLS + colIdx];
+                if (!cell) return null;
 
-            return (
-            <button
-              key={`${rowIdx}-${colIdx}`}
-              type="button"
-              disabled={!canSelect || !cell.revealed}
-              onClick={() => onSelect?.(rowIdx, colIdx)}
-              className={cn(
-                "min-h-24 rounded-lg border border-slate-700 bg-slate-800/80 p-3 text-left transition-all",
-                !cell.revealed && "opacity-30",
-                cell.revealed && getRevealIntensity(cell.rarity),
-                canSelect && cell.revealed && "hover:border-amber-400"
-              )}
-            >
-              {cell.revealed ? (
-                <>
-                  <p className="text-xs text-amber-400">Tier {cell.tier}</p>
-                  <p className="font-semibold">{cell.name}</p>
-                  <p className="mt-1 text-sm text-slate-300">{cell.text}</p>
-                </>
-              ) : (
-                <p className="text-center text-slate-500">?</p>
-              )}
-            </button>
-            );
-          })
-        )}
+                return (
+                  <button
+                    key={`${rowIdx}-${colIdx}`}
+                    type="button"
+                    disabled={!canSelect || !cell.revealed}
+                    onClick={() => onSelect?.(rowIdx, colIdx)}
+                    className={cn(
+                      "min-h-24 rounded-lg border border-slate-700 bg-slate-800/80 p-3 text-left transition-all",
+                      !cell.revealed && "opacity-30",
+                      cell.revealed && getRevealIntensity(cell.rarity),
+                      canSelect && cell.revealed && "hover:border-amber-400"
+                    )}
+                  >
+                    {cell.revealed ? (
+                      <>
+                        <p className="text-xs text-amber-400">Tier {cell.tier}</p>
+                        <p className="font-semibold">{cell.name}</p>
+                        <p className="mt-1 text-sm text-slate-300">{cell.text}</p>
+                      </>
+                    ) : (
+                      <p className="text-center text-slate-500">?</p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

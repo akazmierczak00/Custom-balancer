@@ -27,7 +27,7 @@ import {
   startPlaying,
   startWeaknessReveal,
 } from "@/lib/lobby/service";
-import { getRevealDelay, getWeaknessCellIndex } from "@/lib/algorithms/drawWeaknesses";
+import { getWeaknessCellIndex, WEAKNESS_REVEAL_DELAY_MS } from "@/lib/algorithms/drawWeaknesses";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyRoomProps {
@@ -105,11 +105,9 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     };
 
     if (nextIndex < drawn.length) {
-      const cell = drawn[nextIndex];
-      const delay = getRevealDelay(cell.rarity);
       const timer = setTimeout(() => {
         void advance();
-      }, delay);
+      }, WEAKNESS_REVEAL_DELAY_MS);
       return () => clearTimeout(timer);
     }
 
@@ -140,6 +138,23 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
   const canStartLineupVoting =
     lobby.status === "overview" && !lobby.votes?.locked && isAdmin;
 
+  const showTeamOverview =
+    lobby.status === "overview" ||
+    lobby.status === "voting_lineup" ||
+    lobby.status === "locked_lineup" ||
+    lobby.status === "weakness_reveal" ||
+    lobby.status === "weakness_pick" ||
+    lobby.status === "final" ||
+    lobby.status === "playing" ||
+    lobby.status === "post_game" ||
+    lobby.status === "cooldown" ||
+    !!lobby.weaknesses?.confirmed;
+
+  const showWeaknessSection =
+    (lobby.status === "weakness_reveal" ||
+      lobby.status === "weakness_pick" ||
+      lobby.weaknesses?.confirmed) &&
+    lobby.weaknesses;
   const canStartWeaknessReveal =
     lobby.status === "overview" &&
     lobby.team1.length > 0 &&
@@ -237,13 +252,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         <RoleReveal lobby={lobby} dual />
       )}
 
-      {(lobby.status === "overview" ||
-        lobby.status === "voting_lineup" ||
-        lobby.status === "locked_lineup" ||
-        lobby.status === "final" ||
-        lobby.status === "playing" ||
-        lobby.status === "post_game" ||
-        lobby.status === "cooldown") && (
+      {showTeamOverview && (
         <TeamOverview
           lobby={lobby}
           votes={
@@ -292,10 +301,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           </div>
         )}
 
-      {(lobby.status === "weakness_reveal" ||
-        lobby.status === "weakness_pick" ||
-        lobby.weaknesses?.confirmed) &&
-        lobby.weaknesses && (
+      {showWeaknessSection && (
         <div className="space-y-4">
           <WeaknessGrid
             weaknesses={lobby.weaknesses}
