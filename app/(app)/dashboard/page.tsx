@@ -157,7 +157,7 @@ export default function DashboardPage() {
             className="dashboard-panel-header flex w-full items-center justify-between rounded-none px-4 py-3 text-left"
           >
             <span className="text-lg font-semibold">
-              Użytkownicy ({manageableUsers.length})
+              Użytkownicy
             </span>
             {usersOpen ? (
               <ChevronUp className="h-5 w-5 text-slate-400" />
