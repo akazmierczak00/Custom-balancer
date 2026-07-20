@@ -24,9 +24,12 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new Error(
-      "Serwer zwrócił niepoprawną odpowiedź. Sprawdź FIREBASE_SERVICE_ACCOUNT_JSON i RIOT_API_KEY w .env.local, potem zrestartuj npm run dev."
-    );
+    const hint =
+      response.status >= 500
+        ? "Sprawdź FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 i RIOT_API_KEY w Vercel → Settings → Environment Variables (Production)."
+        : `Nieoczekiwana odpowiedź serwera (HTTP ${response.status}).`;
+
+    throw new Error(`Serwer zwrócił niepoprawną odpowiedź. ${hint}`);
   }
 }
 

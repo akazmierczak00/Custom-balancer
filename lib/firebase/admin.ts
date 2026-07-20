@@ -1,16 +1,12 @@
 import { App, cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
-import { parseServiceAccountJson } from "@/lib/firebase/parse-service-account";
+import { parseServiceAccountJson, getServiceAccountRaw } from "@/lib/firebase/parse-service-account";
 
 function getServiceAccount() {
-  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!json) {
-    throw new Error("Brak FIREBASE_SERVICE_ACCOUNT_JSON w zmiennych środowiskowych.");
-  }
-
-  return parseServiceAccountJson(json);
+  return parseServiceAccountJson(getServiceAccountRaw());
 }
+
 function getAdminApp(): App {
   if (getApps().length > 0) {
     return getApps()[0]!;
@@ -18,13 +14,19 @@ function getAdminApp(): App {
 
   const serviceAccount = getServiceAccount();
 
-  return initializeApp({
-    credential: cert({
-      projectId: serviceAccount.project_id,
-      clientEmail: serviceAccount.client_email,
-      privateKey: serviceAccount.private_key.replace(/\\n/g, "\n"),
-    }),
-  });
+  try {
+    return initializeApp({
+      credential: cert({
+        projectId: serviceAccount.project_id,
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key,
+      }),
+    });
+  } catch {
+    throw new Error(
+      "Firebase Admin: nieprawidłowy klucz prywatny w service account. Użyj FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 w Vercel."
+    );
+  }
 }
 
 export function getFirebaseAdminAuth() {
