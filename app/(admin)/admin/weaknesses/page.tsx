@@ -113,7 +113,7 @@ export default function WeaknessesAdminPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Rzadkość (1 = najrzadsze, 100 = common)</Label>
+              <Label>Rzadkość (1 = najczęstsze, 100 = najrzadsze)</Label>
               <Input
                 type="number"
                 min={1}

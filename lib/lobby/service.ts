@@ -17,9 +17,9 @@ import {
   generateDistinctProposals,
 } from "@/lib/algorithms/balanceTeams";
 import {
-  sanitizeWeaknessForm,
-  WeaknessFormInput,
-} from "@/lib/weaknesses/helpers";
+  getWeaknessPointsBase,
+  getWeaknessPointsTotal,
+} from "@/lib/lobby/weakness-points";
 import {
   drawWeaknessGrid,
   flattenWeaknessGrid,
@@ -32,6 +32,10 @@ import {
   getNarrowPoolTiers,
 } from "@/lib/champions/narrow-pool";
 import { ChampionCatalogEntry } from "@/lib/champions/types";
+import {
+  sanitizeWeaknessForm,
+  WeaknessFormInput,
+} from "@/lib/weaknesses/helpers";
 import {
   toFirestoreProposal,
   toFirestoreTeam,
@@ -818,7 +822,7 @@ export async function startWeaknessReveal(lobbyId: string) {
     weaknesses: toFirestoreWeaknesses({
       ...defaultWeaknessesState(),
       drawn,
-      pointsTotal: 3,
+      pointsTotal: getWeaknessPointsBase(lobby),
       revealIndex: 0,
     }),
     updatedAt: serverTimestamp(),
@@ -836,7 +840,7 @@ export async function revealNextWeakness(lobbyId: string) {
 
   if (nextIndex >= drawn.length) {
     const selectorUid = findWeaknessSelector(lobby);
-    const pointsTotal = 3 + (lobby.reshuffleBonusGranted ? 1 : 0);
+    const pointsTotal = getWeaknessPointsTotal(lobby);
     await updateDoc(lobbyRef, {
       status: "weakness_pick",
       weaknesses: toFirestoreWeaknesses({
@@ -1314,7 +1318,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
         ...lobby.weaknesses,
         drawn,
         selectorUid: findWeaknessSelector(lobby),
-        pointsTotal: 3 + (lobby.reshuffleBonusGranted ? 1 : 0),
+        pointsTotal: getWeaknessPointsTotal(lobby),
         pointsSpent: 0,
         selected: [],
         confirmed: false,

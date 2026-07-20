@@ -1,9 +1,9 @@
 import {
   buildFullProposal,
   generateBalancedTeams,
-} from "../lib/algorithms/balanceTeams.ts";
-import { getRankLabel, getRankPoints } from "../lib/constants/ranks.ts";
-import type { LobbyPlayer, LoLRole } from "../types/index.ts";
+} from "../lib/algorithms/balanceTeams";
+import { getRankLabel, getRankPoints } from "../lib/constants/ranks";
+import type { LobbyPlayer, LoLRole } from "../types/index";
 
 function player(
   nick: string,
