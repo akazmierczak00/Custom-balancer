@@ -62,7 +62,7 @@ function teamPointsSum(team: LobbyPlayer[]): number {
 /** Klasyczny podział — bez zmian względem poprzedniej wersji. */
 export function generateBalancedTeams(
   players: LobbyPlayer[],
-  maxDeviation = 2,
+  maxDeviation = 4,
   attempts = 200
 ): { team1: LobbyPlayer[]; team2: LobbyPlayer[] } {
   if (players.length !== 10) {

@@ -9,7 +9,7 @@ export const BALANCE_MODES: {
     value: "classic",
     label: "Klasyczny",
     description:
-      "Wyrównanie po randze (±2 pkt). Role: od najniższej rangi, pierwsza wolna z priorytetu.",
+      "Wyrównanie po randze (±4 pkt). Role: od najniższej rangi, pierwsza wolna z priorytetu.",
   },
   {
     value: "roles",

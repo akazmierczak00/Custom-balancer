@@ -56,7 +56,7 @@ for (const p of [...roster].sort((a, b) =>
     `  ${p.nick.padEnd(8)} ${getRankLabel(p.rank, p.rankDivision).padEnd(14)} ${pts} pkt`
   );
 }
-console.log(`\nSuma wszystkich: ${total} pkt  |  Cel na drużynę: ${avg} pkt (±2)\n`);
+console.log(`\nSuma wszystkich: ${total} pkt  |  Cel na drużynę: ${avg} pkt (±4)\n`);
 
 console.log("=== 5 PRZYKŁADOWYCH LOSOWAŃ (tylko podział na drużyny) ===\n");
 
