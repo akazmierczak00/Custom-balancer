@@ -15,6 +15,7 @@ import { getFirebaseDb } from "@/lib/firebase/config";
 import {
   buildFullProposal,
   generateDistinctProposals,
+  proposalsAreEqual,
 } from "@/lib/algorithms/balanceTeams";
 import {
   getWeaknessPointsBase,
@@ -1192,19 +1193,34 @@ export async function startNextRound(lobbyId: string) {
   if (!snap.exists()) throw new Error("Lobby nie istnieje");
 
   const lobby = snap.data() as Lobby;
-  const team1 = await refreshTeamAssignments(lobby.team1);
-  const team2 = await refreshTeamAssignments(lobby.team2);
+  const uids = lobby.slots.filter(Boolean) as string[];
+  if (uids.length !== LOBBY_SIZE) {
+    throw new Error("Lobby musi mieć 10 graczy, aby zacząć kolejną rundę");
+  }
+
+  const players = await fetchLobbyPlayers(uids);
+  const previous: TeamProposal = {
+    team1: lobby.team1,
+    team2: lobby.team2,
+  };
+
+  let proposal = buildFullProposal(players, lobby.balanceMode);
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if (!proposalsAreEqual(proposal, previous)) break;
+    proposal = buildFullProposal(players, lobby.balanceMode);
+  }
 
   await updateDoc(lobbyRef, {
     status: "reveal",
-    team1: toFirestoreTeam(team1),
-    team2: toFirestoreTeam(team2),
+    team1: toFirestoreTeam(proposal.team1),
+    team2: toFirestoreTeam(proposal.team2),
     ...preRevealPhaseUpdates(),
     votes: defaultVotes(),
     proposalA: null,
     proposalB: null,
     weaknesses: defaultWeaknessesState(),
     winnerTeam: null,
+    reshuffleBonusGranted: false,
     updatedAt: serverTimestamp(),
   });
 }
