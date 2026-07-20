@@ -8,7 +8,8 @@ export const BALANCE_MODES: {
   {
     value: "classic",
     label: "Klasyczny",
-    description: "Obecny algorytm — wyrównanie po randze (±2 pkt), role potem.",
+    description:
+      "Wyrównanie po randze (±2 pkt). Role: od najniższej rangi, pierwsza wolna z priorytetu.",
   },
   {
     value: "roles",

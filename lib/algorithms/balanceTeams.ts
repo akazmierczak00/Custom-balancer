@@ -93,35 +93,18 @@ export function generateBalancedTeams(
 
 function pickRoleForPlayer(
   player: LobbyPlayer,
-  takenRoles: Set<LoLRole>,
-  conflictingPlayers: LobbyPlayer[]
+  takenRoles: Set<LoLRole>
 ): LoLRole {
   const priorities = getPriorityList(player);
 
   for (const role of priorities) {
     if (!takenRoles.has(role)) {
-      const othersWant = conflictingPlayers.filter((p) =>
-        getPriorityList(p).includes(role)
-      );
-      if (othersWant.length > 0) {
-        const pool = [player, ...othersWant];
-        const winner = pool[Math.floor(Math.random() * pool.length)];
-        if (winner.uid !== player.uid) continue;
-      }
       return role;
     }
   }
 
   const available = ALL_ROLES.filter((r) => !takenRoles.has(r));
   return available[0] ?? ALL_ROLES[0];
-}
-
-function ranksMatch(a: LobbyPlayer, b: LobbyPlayer): boolean {
-  return (
-    a.rank === b.rank &&
-    (a.rankDivision ?? "") === (b.rankDivision ?? "") &&
-    (a.rankLp ?? 0) === (b.rankLp ?? 0)
-  );
 }
 
 function toAssignment(player: LobbyPlayer, role: LoLRole): PlayerAssignment {
@@ -139,7 +122,7 @@ function toAssignment(player: LobbyPlayer, role: LoLRole): PlayerAssignment {
   };
 }
 
-/** Klasyczne przypisanie ról — zachowane 1:1. */
+/** Klasyczne przypisanie ról: od najniższej rangi, pierwsza wolna rola z priorytetu. */
 export function assignRoles(
   team1: LobbyPlayer[],
   team2: LobbyPlayer[]
@@ -150,26 +133,7 @@ export function assignRoles(
     const assignments: PlayerAssignment[] = [];
 
     for (const player of sorted) {
-      const sameRankSamePriority = sorted.filter(
-        (p) =>
-          p.uid !== player.uid &&
-          ranksMatch(p, player) &&
-          JSON.stringify(getPriorityList(p)) ===
-            JSON.stringify(getPriorityList(player))
-      );
-
-      let role: LoLRole;
-      if (sameRankSamePriority.length > 0 && Math.random() < 0.5) {
-        const pool = [player, ...sameRankSamePriority];
-        const winner = pool[Math.floor(Math.random() * pool.length)];
-        const priorities = getPriorityList(winner);
-        role =
-          priorities.find((r) => !taken.has(r)) ??
-          (ALL_ROLES.find((r) => !taken.has(r)) as LoLRole);
-      } else {
-        role = pickRoleForPlayer(player, taken, sorted);
-      }
-
+      const role = pickRoleForPlayer(player, taken);
       taken.add(role);
       assignments.push(toAssignment(player, role));
     }
