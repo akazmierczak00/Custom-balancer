@@ -1,10 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
 import { castLineupVote, castLineupVoteForTeam } from "@/lib/lobby/service";
 import { cn } from "@/lib/utils";
-import { Lobby } from "@/types";
+import { Lobby, LineupVoteChoice } from "@/types";
 
 interface LineupVotePanelProps {
   lobby: Lobby;
@@ -23,6 +25,7 @@ export function LineupVotePanel({
   resultText,
   isAdmin = false,
 }: LineupVotePanelProps) {
+  const lobbyUsers = useLobbyUsers();
   const votes = lobby.votes.lineup;
   const acceptCount = Object.values(votes).filter((v) => v === "accept").length;
   const reshuffleCount = Object.values(votes).filter((v) => v === "reshuffle").length;
@@ -31,6 +34,30 @@ export function LineupVotePanel({
   const totalVotes = Math.max(votedCount, 1);
   const acceptShare = (acceptCount / totalVotes) * 100;
   const reshuffleShare = (reshuffleCount / totalVotes) * 100;
+
+  const nickByUid = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const player of [...lobby.team1, ...lobby.team2]) {
+      map.set(player.uid, player.nick);
+    }
+    if (lobbyUsers) {
+      for (const [uid, profile] of Object.entries(lobbyUsers)) {
+        if (!map.has(uid) && profile.nick) {
+          map.set(uid, profile.nick);
+        }
+      }
+    }
+    return map;
+  }, [lobby.team1, lobby.team2, lobbyUsers]);
+
+  const votersFor = (choice: LineupVoteChoice) =>
+    Object.entries(votes)
+      .filter(([, vote]) => vote === choice)
+      .map(([uid]) => nickByUid.get(uid) ?? uid.slice(0, 6))
+      .sort((a, b) => a.localeCompare(b, "pl"));
+
+  const acceptVoters = votersFor("accept");
+  const reshuffleVoters = votersFor("reshuffle");
 
   const vote = async (choice: "accept" | "reshuffle") => {
     try {
@@ -96,7 +123,7 @@ export function LineupVotePanel({
                 disabled={locked || myVote === "accept"}
                 onClick={() => void vote("accept")}
                 className={cn(
-                  "rounded-xl border px-4 py-5 text-left transition-all",
+                  "flex flex-col rounded-xl border px-4 py-5 text-left transition-all",
                   myVote === "accept"
                     ? "border-emerald-500/50 bg-emerald-950/35 ring-1 ring-emerald-400/30"
                     : "border-slate-700/80 bg-slate-800/40",
@@ -120,6 +147,7 @@ export function LineupVotePanel({
                 {myVote === "accept" && (
                   <p className="mt-3 text-xs font-medium text-emerald-400">Twój głos</p>
                 )}
+                <VoterList names={acceptVoters} emptyLabel="Brak głosów" accent="emerald" />
               </button>
 
               <button
@@ -127,7 +155,7 @@ export function LineupVotePanel({
                 disabled={locked || myVote === "reshuffle"}
                 onClick={() => void vote("reshuffle")}
                 className={cn(
-                  "rounded-xl border px-4 py-5 text-left transition-all",
+                  "flex flex-col rounded-xl border px-4 py-5 text-left transition-all",
                   myVote === "reshuffle"
                     ? "border-rose-500/50 bg-rose-950/35 ring-1 ring-rose-400/30"
                     : "border-slate-700/80 bg-slate-800/40",
@@ -151,6 +179,7 @@ export function LineupVotePanel({
                 {myVote === "reshuffle" && (
                   <p className="mt-3 text-xs font-medium text-rose-400">Twój głos</p>
                 )}
+                <VoterList names={reshuffleVoters} emptyLabel="Brak głosów" accent="rose" />
               </button>
             </div>
 
@@ -194,5 +223,39 @@ export function LineupVotePanel({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function VoterList({
+  names,
+  emptyLabel,
+  accent,
+}: {
+  names: string[];
+  emptyLabel: string;
+  accent: "emerald" | "rose";
+}) {
+  return (
+    <div className="mt-auto border-t border-slate-700/50 pt-3">
+      <p
+        className={cn(
+          "mb-1.5 text-[10px] font-semibold uppercase tracking-wide",
+          accent === "emerald" ? "text-emerald-400/70" : "text-rose-400/70"
+        )}
+      >
+        Zagłosowali
+      </p>
+      {names.length === 0 ? (
+        <p className="text-[11px] text-slate-500">{emptyLabel}</p>
+      ) : (
+        <ul className="max-h-24 space-y-0.5 overflow-y-auto text-[11px] leading-snug text-slate-300">
+          {names.map((name) => (
+            <li key={name} className="truncate">
+              {name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
