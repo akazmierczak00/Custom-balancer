@@ -227,12 +227,17 @@ export function ProposalVotePanel({
         </div>
 
         <div className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-300">
-            Głosowali:{" "}
-            <span className="font-semibold tabular-nums text-slate-100">
-              {votedCount}/10
-            </span>
-          </p>
+          <div>
+            <p className="text-sm text-slate-300">
+              Głosowali:{" "}
+              <span className="font-semibold tabular-nums text-slate-100">
+                {votedCount}/10
+              </span>
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Żeby przejść dalej, muszą zagłosować wszyscy (10/10).
+            </p>
+          </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800 sm:max-w-48">
             <div
               className="h-full rounded-full bg-slate-400/70 transition-all duration-500"
