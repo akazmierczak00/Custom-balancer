@@ -1,19 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { RANKS, getRankLabel } from "@/lib/constants/ranks";
+import {
+  DIVISIONS,
+  RANKS,
+  getRankLabel,
+  isMasterPlusTier,
+} from "@/lib/constants/ranks";
 import {
   DEFAULT_ROLE_PRIORITIES,
   normalizeRolePriorities,
   ROLES,
 } from "@/lib/constants/roles";
+import { postRiotLink, postRiotSync } from "@/lib/riot/browser";
 import { saveUserProfile } from "@/lib/lobby/service";
-import { LoLRole, RolePriorityGroup, UserProfile } from "@/types";
+import { LoLRole, LoLDivision, RolePriorityGroup, UserProfile } from "@/types";
 
 interface ProfileFormProps {
   profile: UserProfile;
@@ -34,6 +40,12 @@ function getInitialPriorities(profile: UserProfile): RolePriorityGroup[] {
   return normalizeRolePriorities(DEFAULT_ROLE_PRIORITIES);
 }
 
+function formatSyncedAt(profile: UserProfile): string | null {
+  const syncedAt = profile.riotRankSyncedAt?.toDate?.();
+  if (!syncedAt) return null;
+  return syncedAt.toLocaleString("pl-PL");
+}
+
 export function ProfileForm({
   profile,
   onSaved,
@@ -42,18 +54,42 @@ export function ProfileForm({
 }: ProfileFormProps) {
   const [nick, setNick] = useState(profile.nick);
   const [rank, setRank] = useState(profile.rank);
+  const [rankDivision, setRankDivision] = useState<LoLDivision | "">(
+    profile.rankDivision ?? ""
+  );
+  const [useRiotRank, setUseRiotRank] = useState(profile.rankSource !== "manual");
+  const [riotSyncDisabled, setRiotSyncDisabled] = useState(
+    profile.riotSyncDisabled ?? false
+  );
+  const [riotGameName, setRiotGameName] = useState(profile.riotGameName ?? "");
+  const [riotTagLine, setRiotTagLine] = useState(profile.riotTagLine ?? "");
   const [priorities, setPriorities] = useState<RolePriorityGroup[]>(() =>
     getInitialPriorities(profile)
   );
   const [dragging, setDragging] = useState<DragState | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [linkingRiot, setLinkingRiot] = useState(false);
+  const [syncingRiot, setSyncingRiot] = useState(false);
+  const [riotMessage, setRiotMessage] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setNick(profile.nick);
+    setRank(profile.rank);
+    setRankDivision(profile.rankDivision ?? "");
+    setUseRiotRank(profile.rankSource !== "manual");
+    setRiotSyncDisabled(profile.riotSyncDisabled ?? false);
+    setRiotGameName(profile.riotGameName ?? "");
+    setRiotTagLine(profile.riotTagLine ?? "");
+  }, [profile]);
 
   const assignedRoles = priorities.flatMap((group) => group.roles);
   const unassignedRoles = ROLES.map((r) => r.value).filter(
     (role) => !assignedRoles.includes(role)
   );
+  const linkedRiotAccount = !!(profile.riotPuuid || profile.riotGameName);
+  const showDivisionSelect = allowRankEdit && rank && !isMasterPlusTier(rank);
 
   const moveRole = (
     role: LoLRole,
@@ -93,6 +129,52 @@ export function ProfileForm({
     handleDragEnd();
   };
 
+  const handleSaveRiotAccount = async () => {
+    setRiotMessage(null);
+    setError("");
+
+    if (!riotGameName.trim() || !riotTagLine.trim()) {
+      setError("Podaj nick i tag Riot Games.");
+      return;
+    }
+
+    setLinkingRiot(true);
+    try {
+      const result = await postRiotLink(profile.uid, riotGameName, riotTagLine);
+      setRiotMessage(`Podpięto konto ${result.gameName}#${result.tagLine}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Błąd zapisu konta Riot.");
+    } finally {
+      setLinkingRiot(false);
+    }
+  };
+
+  const handleSyncRiotRank = async () => {
+    setRiotMessage(null);
+    setError("");
+    setSyncingRiot(true);
+
+    try {
+      const result = await postRiotSync(profile.uid);
+
+      if (result.status === "skipped") {
+        setRiotMessage(
+          (result as { message?: string }).message ?? "Synchronizacja pominięta."
+        );
+      } else {
+        setRiotMessage(
+          result.rankLabel
+            ? `Zsynchronizowano rangę: ${result.rankLabel}.`
+            : "Ranga została zsynchronizowana."
+        );
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Błąd synchronizacji rangi.");
+    } finally {
+      setSyncingRiot(false);
+    }
+  };
+
   const handleSave = async () => {
     setError("");
     if (!nick.trim()) {
@@ -101,6 +183,10 @@ export function ProfileForm({
     }
     if (allowRankEdit && !rank) {
       setError("Wybierz rangę");
+      return;
+    }
+    if (allowRankEdit && showDivisionSelect && !rankDivision) {
+      setError("Wybierz dywizję rangi");
       return;
     }
     if (unassignedRoles.length > 0) {
@@ -118,6 +204,17 @@ export function ProfileForm({
 
       if (allowRankEdit) {
         payload.rank = rank;
+        payload.rankDivision = showDivisionSelect ? rankDivision : "";
+        payload.rankSource = useRiotRank ? "riot" : "manual";
+        payload.riotSyncDisabled = riotSyncDisabled;
+        // Manual rank must not keep previously synced LP value.
+        // LP input is not available in our UI for Master+ tiers, so we clear it on manual save.
+        if (!useRiotRank) {
+          payload.rankLp = 0;
+        }
+        if (isMasterPlusTier(rank)) {
+          payload.rankDivision = "";
+        }
       }
 
       await saveUserProfile(profile.uid, payload);
@@ -141,30 +238,152 @@ export function ProfileForm({
             id="nick"
             value={nick}
             onChange={(e) => setNick(e.target.value)}
-            placeholder="Twój nick w grze"
+            placeholder="Twój nick w aplikacji"
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="rank">Ranga (LoL)</Label>
           {allowRankEdit ? (
-            <select
-              id="rank"
-              value={rank}
-              onChange={(e) => setRank(e.target.value as UserProfile["rank"])}
-              className="flex h-10 w-full rounded-md border border-slate-600 bg-slate-900 px-3 text-sm text-slate-100"
-            >
-              <option value="">Wybierz rangę</option>
-              {RANKS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <select
+                  id="rank"
+                  value={rank}
+                  onChange={(e) => {
+                    const nextRank = e.target.value as UserProfile["rank"];
+                    setRank(nextRank);
+                    if (isMasterPlusTier(nextRank)) {
+                      setRankDivision("");
+                    }
+                  }}
+                  className="flex h-10 w-full rounded-md border border-slate-600 bg-slate-900 px-3 text-sm text-slate-100"
+                >
+                  <option value="">Wybierz rangę</option>
+                  {RANKS.map((entry) => (
+                    <option key={entry.value} value={entry.value}>
+                      {entry.label}
+                    </option>
+                  ))}
+                </select>
+
+                {showDivisionSelect && (
+                  <select
+                    id="rankDivision"
+                    value={rankDivision}
+                    onChange={(e) =>
+                      setRankDivision(e.target.value as LoLDivision | "")
+                    }
+                    className="flex h-10 w-full rounded-md border border-slate-600 bg-slate-900 px-3 text-sm text-slate-100"
+                  >
+                    <option value="">Wybierz dywizję</option>
+                    {DIVISIONS.map((division) => (
+                      <option key={division} value={division}>
+                        {division}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={useRiotRank}
+                  onChange={(e) => setUseRiotRank(e.target.checked)}
+                  className="rounded border-slate-600"
+                />
+                Użyj rangi z Riot (sync może nadpisywać ręczną rangę)
+              </label>
+
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={riotSyncDisabled}
+                  onChange={(e) => setRiotSyncDisabled(e.target.checked)}
+                  className="rounded border-slate-600"
+                />
+                Wyłącz automatyczną aktualizację z Riot
+              </label>
+            </div>
           ) : (
             <p className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-200">
-              {rank ? getRankLabel(rank) : "Nie ustawiona — poproś admina o ustawienie rangi"}
+              {rank
+                ? getRankLabel(rank, profile.rankDivision, profile.rankLp)
+                : "Nie ustawiona — poproś admina o ustawienie rangi"}
+              {profile.rankSource === "manual" && (
+                <span className="mt-1 block text-xs text-amber-400/80">
+                  Ranga ustawiona ręcznie przez admina
+                </span>
+              )}
             </p>
+          )}
+        </div>
+
+        <div className="space-y-4 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <div>
+            <h3 className="font-semibold text-slate-100">Profil Riot Games (EUNE)</h3>
+            <p className="mt-1 text-xs text-slate-400">
+              Podaj nick i tag, zapisz konto, a następnie zsynchronizuj rangę Solo/Duo.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="riotGameName">Nick Riot</Label>
+              <Input
+                id="riotGameName"
+                value={riotGameName}
+                onChange={(e) => setRiotGameName(e.target.value)}
+                placeholder="SummonerName"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="riotTagLine">Tag</Label>
+              <Input
+                id="riotTagLine"
+                value={riotTagLine}
+                onChange={(e) => setRiotTagLine(e.target.value)}
+                placeholder="EUNE"
+              />
+            </div>
+          </div>
+
+          {linkedRiotAccount && (
+            <p className="text-sm text-slate-300">
+              Podpięte konto:{" "}
+              <span className="font-medium text-slate-100">
+                {profile.riotGameName}#{profile.riotTagLine}
+              </span>
+              {formatSyncedAt(profile) && (
+                <span className="mt-1 block text-xs text-slate-500">
+                  Ostatnia synchronizacja: {formatSyncedAt(profile)}
+                </span>
+              )}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleSaveRiotAccount()}
+              disabled={linkingRiot}
+            >
+              {linkingRiot ? "Zapisywanie..." : "Zapisz konto Riot"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleSyncRiotRank()}
+              disabled={syncingRiot || !linkedRiotAccount}
+            >
+              {syncingRiot ? "Synchronizacja..." : "Synchronizuj rangę"}
+            </Button>
+          </div>
+
+          {riotMessage && (
+            <p className="text-sm text-emerald-300">{riotMessage}</p>
           )}
         </div>
 
@@ -238,7 +457,7 @@ export function ProfileForm({
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
-        <Button onClick={handleSave} disabled={saving} className="w-full">
+        <Button onClick={() => void handleSave()} disabled={saving} className="w-full">
           {saving ? "Zapisywanie..." : "Zapisz profil"}
         </Button>
       </CardContent>

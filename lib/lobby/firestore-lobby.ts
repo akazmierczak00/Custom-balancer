@@ -27,6 +27,8 @@ export function toFirestorePlayerAssignment(
     rank: player.rank,
     role: player.role,
     matchHistory: player.matchHistory ?? [],
+    ...(player.rankDivision ? { rankDivision: player.rankDivision } : {}),
+    ...(player.rankLp !== undefined ? { rankLp: player.rankLp } : {}),
     ...(player.wins !== undefined ? { wins: player.wins } : {}),
     ...(player.losses !== undefined ? { losses: player.losses } : {}),
     ...(rolePrioritiesLabel ? { rolePrioritiesLabel } : {}),

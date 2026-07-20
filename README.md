@@ -36,6 +36,15 @@ firebase deploy --only firestore:rules
 3. W Firebase Console dodaj domenę Vercel do Authorized domains
 4. Deploy
 
+### Riot API (opcjonalnie)
+
+1. Utwórz klucz na [Riot Developer Portal](https://developer.riotgames.com/) (Production key dla produkcji)
+2. Dodaj do Vercel / `.env.local`:
+   - `RIOT_API_KEY`
+   - `FIREBASE_SERVICE_ACCOUNT_JSON` (JSON service account Firebase, jedna linia)
+   - `CRON_SECRET` (losowy sekret dla cron joba)
+3. Cron `/api/cron/sync-riot-ranks` uruchamia się codziennie o 6:00 UTC i aktualizuje rangi użytkowników z podpiętym kontem Riot (pomija profile z ręczną rangą lub wyłączonym auto-sync)
+
 ## Role
 
 - **Admin** — tworzy lobby, zarządza osłabieniami, wybiera zwycięzcę, ustawia cooldown

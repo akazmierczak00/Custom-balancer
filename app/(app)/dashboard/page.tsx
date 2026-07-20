@@ -191,7 +191,9 @@ export default function DashboardPage() {
                         {entry.nick || "Bez nicku"}
                       </span>
                       <span className="text-sm text-slate-400">
-                        {entry.rank ? getRankLabel(entry.rank) : "Brak rangi"}
+                        {entry.rank
+                          ? getRankLabel(entry.rank, entry.rankDivision, entry.rankLp)
+                          : "Brak rangi"}
                       </span>
                     </Link>
                   ))}

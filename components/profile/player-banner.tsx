@@ -69,6 +69,9 @@ export function PlayerBanner({
 
   const nick = "nick" in player ? player.nick : "";
   const rank = "rank" in player ? player.rank : "";
+  const rankDivision =
+    "rankDivision" in player ? player.rankDivision : undefined;
+  const rankLp = "rankLp" in player ? player.rankLp : undefined;
   const matchHistory = "matchHistory" in player ? player.matchHistory : [];
   const rolePrioritiesLabel =
     "rolePrioritiesLabel" in player ? player.rolePrioritiesLabel : undefined;
@@ -80,7 +83,7 @@ export function PlayerBanner({
 
   const winRate = getWinRatePercent(player);
 
-  const rankLabel = rank ? getRankLabel(rank as never) : "Brak rangi";
+  const rankLabel = rank ? getRankLabel(rank as never, rankDivision, rankLp) : "Brak rangi";
   const rolePrioritiesLine =
     showRolePriorities && !compact
       ? rolePrioritiesLabel

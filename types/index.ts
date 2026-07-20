@@ -14,6 +14,10 @@ export type LoLRank =
   | "grandmaster"
   | "challenger";
 
+export type LoLDivision = "I" | "II" | "III" | "IV";
+
+export type RankSource = "manual" | "riot";
+
 export type LoLRole = "top" | "jungle" | "mid" | "adc" | "support";
 
 export type MatchResult = "W" | "L";
@@ -29,6 +33,9 @@ export interface UserProfile {
   role: UserRole;
   nick: string;
   rank: LoLRank | "";
+  rankDivision?: LoLDivision | "";
+  rankLp?: number;
+  rankSource?: RankSource;
   rolePriorities: RolePriorityGroup[];
   wins: number;
   losses: number;
@@ -36,7 +43,12 @@ export interface UserProfile {
   profileComplete: boolean;
   achievements: string[];
   isTestBot?: boolean;
+  riotGameName?: string;
+  riotTagLine?: string;
   riotPuuid?: string;
+  riotLinkedAt?: Timestamp;
+  riotRankSyncedAt?: Timestamp;
+  riotSyncDisabled?: boolean;
   createdAt: Timestamp;
 }
 
@@ -74,6 +86,8 @@ export interface PlayerAssignment {
   uid: string;
   nick: string;
   rank: LoLRank;
+  rankDivision?: LoLDivision | "";
+  rankLp?: number;
   role: LoLRole;
   wins?: number;
   losses?: number;
@@ -179,6 +193,8 @@ export interface LobbyPlayer {
   uid: string;
   nick: string;
   rank: LoLRank;
+  rankDivision?: LoLDivision | "";
+  rankLp?: number;
   rolePriorities: RolePriorityGroup[];
   wins: number;
   losses: number;

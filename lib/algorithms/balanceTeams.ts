@@ -1,9 +1,13 @@
 import { LobbyPlayer, LoLRank, PlayerAssignment, TeamProposal } from "@/types";
-import { RANK_POINTS } from "@/lib/constants/ranks";
+import { getRankPoints } from "@/lib/constants/ranks";
 import { formatRolePriorities } from "@/lib/constants/roles";
 import { LoLRole } from "@/types";
 
 const ALL_ROLES: LoLRole[] = ["top", "jungle", "mid", "adc", "support"];
+
+function playerPoints(player: LobbyPlayer): number {
+  return getRankPoints(player.rank, player.rankDivision, player.rankLp);
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -15,7 +19,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function partitionScore(team: LobbyPlayer[], avgPerTeam: number): number {
-  const sum = team.reduce((acc, p) => acc + RANK_POINTS[p.rank], 0);
+  const sum = team.reduce((acc, p) => acc + playerPoints(p), 0);
   return Math.abs(sum - avgPerTeam);
 }
 
@@ -28,10 +32,7 @@ export function generateBalancedTeams(
     throw new Error("Wymagane jest dokładnie 10 graczy");
   }
 
-  const totalPoints = players.reduce(
-    (acc, p) => acc + RANK_POINTS[p.rank],
-    0
-  );
+  const totalPoints = players.reduce((acc, p) => acc + playerPoints(p), 0);
   const avgPerTeam = totalPoints / 2;
 
   const candidates: { team1: LobbyPlayer[]; team2: LobbyPlayer[]; score: number }[] =
@@ -41,8 +42,8 @@ export function generateBalancedTeams(
     const shuffled = shuffle(players);
     const team1 = shuffled.slice(0, 5);
     const team2 = shuffled.slice(5, 10);
-    const team1Sum = team1.reduce((acc, p) => acc + RANK_POINTS[p.rank], 0);
-    const team2Sum = team2.reduce((acc, p) => acc + RANK_POINTS[p.rank], 0);
+    const team1Sum = team1.reduce((acc, p) => acc + playerPoints(p), 0);
+    const team2Sum = team2.reduce((acc, p) => acc + playerPoints(p), 0);
 
     if (
       Math.abs(team1Sum - avgPerTeam) > maxDeviation ||
@@ -97,14 +98,20 @@ function pickRoleForPlayer(
   return available[0] ?? ALL_ROLES[0];
 }
 
+function ranksMatch(a: LobbyPlayer, b: LobbyPlayer): boolean {
+  return (
+    a.rank === b.rank &&
+    (a.rankDivision ?? "") === (b.rankDivision ?? "") &&
+    (a.rankLp ?? 0) === (b.rankLp ?? 0)
+  );
+}
+
 export function assignRoles(
   team1: LobbyPlayer[],
   team2: LobbyPlayer[]
 ): TeamProposal {
   const assignTeam = (team: LobbyPlayer[]): PlayerAssignment[] => {
-    const sorted = [...team].sort(
-      (a, b) => RANK_POINTS[a.rank] - RANK_POINTS[b.rank]
-    );
+    const sorted = [...team].sort((a, b) => playerPoints(a) - playerPoints(b));
     const taken = new Set<LoLRole>();
     const assignments: PlayerAssignment[] = [];
 
@@ -112,7 +119,7 @@ export function assignRoles(
       const sameRankSamePriority = sorted.filter(
         (p) =>
           p.uid !== player.uid &&
-          p.rank === player.rank &&
+          ranksMatch(p, player) &&
           JSON.stringify(getPriorityList(p)) ===
             JSON.stringify(getPriorityList(player))
       );
@@ -134,6 +141,8 @@ export function assignRoles(
         uid: player.uid,
         nick: player.nick,
         rank: player.rank,
+        ...(player.rankDivision ? { rankDivision: player.rankDivision } : {}),
+        ...(player.rankLp !== undefined ? { rankLp: player.rankLp } : {}),
         role,
         wins: player.wins,
         losses: player.losses,

@@ -472,6 +472,8 @@ async function fetchLobbyPlayers(uids: string[]): Promise<LobbyPlayer[]> {
       uid,
       nick: data.nick,
       rank: data.rank as LoLRank,
+      ...(data.rankDivision ? { rankDivision: data.rankDivision } : {}),
+      ...(data.rankLp !== undefined ? { rankLp: data.rankLp } : {}),
       rolePriorities: data.rolePriorities,
       wins: data.wins,
       losses: data.losses,
@@ -870,7 +872,14 @@ function findWeaknessSelector(lobby: Lobby): string | null {
   if (opposingTeam.length === 0) return null;
 
   const sorted = [...opposingTeam].sort((a, b) =>
-    compareRanks(a.rank, b.rank)
+    compareRanks(
+      a.rank,
+      b.rank,
+      a.rankDivision,
+      b.rankDivision,
+      a.rankLp,
+      b.rankLp
+    )
   );
   return sorted[0]?.uid ?? null;
 }
