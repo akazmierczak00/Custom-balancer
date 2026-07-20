@@ -1,5 +1,4 @@
 import { App, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { parseServiceAccountJson, getServiceAccountRaw } from "@/lib/firebase/parse-service-account";
 
@@ -27,10 +26,6 @@ function getAdminApp(): App {
       "Firebase Admin: nieprawidłowy klucz prywatny w service account. Użyj FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 w Vercel."
     );
   }
-}
-
-export function getFirebaseAdminAuth() {
-  return getAuth(getAdminApp());
 }
 
 export function getFirebaseAdminFirestore() {

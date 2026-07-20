@@ -14,8 +14,8 @@ export async function GET() {
 
   if (firebase.configured) {
     try {
-      const { getFirebaseAdminAuth } = await import("@/lib/firebase/admin");
-      getFirebaseAdminAuth();
+      const { getFirebaseAdminFirestore } = await import("@/lib/firebase/admin");
+      getFirebaseAdminFirestore();
       adminInit = true;
     } catch (error) {
       adminError =

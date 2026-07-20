@@ -1,6 +1,6 @@
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin";
+import { getFirebaseAdminFirestore } from "@/lib/firebase/admin";
+import { verifyFirebaseIdToken } from "@/lib/firebase/verify-id-token";
 import { UserProfile } from "@/types";
-
 export class AuthError extends Error {
   constructor(message = "Brak autoryzacji") {
     super(message);
@@ -25,8 +25,7 @@ export async function verifyAuthToken(request: Request): Promise<{
   }
 
   const token = header.slice("Bearer ".length).trim();
-  const decoded = await getFirebaseAdminAuth().verifyIdToken(token);
-
+  const decoded = await verifyFirebaseIdToken(token);
   const userSnap = await getFirebaseAdminFirestore()
     .collection("users")
     .doc(decoded.uid)
