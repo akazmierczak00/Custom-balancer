@@ -662,7 +662,10 @@ export async function resolveLineupVote(lobbyId: string) {
     const players = await fetchLobbyPlayers(uids);
     const { proposalA, proposalB } = generateDistinctProposals(
       players,
-      lobby.balanceMode
+      lobby.balanceMode,
+      {
+        exclude: [{ team1: lobby.team1, team2: lobby.team2 }],
+      }
     );
 
     await updateDoc(lobbyRef, {
@@ -1312,7 +1315,13 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       const players = await fetchLobbyPlayers(uids);
       const { proposalA, proposalB } = generateDistinctProposals(
         players,
-        lobby.balanceMode
+        lobby.balanceMode,
+        {
+          exclude:
+            lobby.team1.length && lobby.team2.length
+              ? [{ team1: lobby.team1, team2: lobby.team2 }]
+              : [],
+        }
       );
       updates.proposalA = toFirestoreProposal(proposalA);
       updates.proposalB = toFirestoreProposal(proposalB);
@@ -1332,7 +1341,12 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
           throw new Error("Brak propozycji A/B — uzupełnij lobby");
         }
         const players = await fetchLobbyPlayers(uids);
-        const proposals = generateDistinctProposals(players, lobby.balanceMode);
+        const proposals = generateDistinctProposals(players, lobby.balanceMode, {
+          exclude:
+            lobby.team1.length && lobby.team2.length
+              ? [{ team1: lobby.team1, team2: lobby.team2 }]
+              : [],
+        });
         proposalA = proposals.proposalA;
         proposalB = proposals.proposalB;
       }

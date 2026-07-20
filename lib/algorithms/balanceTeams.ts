@@ -369,12 +369,41 @@ function buildScoredProposal(
 }
 
 export function proposalsAreEqual(a: TeamProposal, b: TeamProposal): boolean {
-  const serialize = (proposal: TeamProposal) =>
-    JSON.stringify({
-      team1: [...proposal.team1].sort((x, y) => x.uid.localeCompare(y.uid)),
-      team2: [...proposal.team2].sort((x, y) => x.uid.localeCompare(y.uid)),
-    });
-  return serialize(a) === serialize(b);
+  return proposalFingerprint(a) === proposalFingerprint(b);
+}
+
+/** Fingerprint niezależny od zamiany Team1/Team2. */
+function proposalFingerprint(proposal: TeamProposal): string {
+  const teamKey = (team: PlayerAssignment[]) =>
+    [...team]
+      .map((player) => `${player.uid}:${player.role}`)
+      .sort()
+      .join(",");
+
+  return [teamKey(proposal.team1), teamKey(proposal.team2)].sort().join("|");
+}
+
+function isProposalForbidden(
+  proposal: TeamProposal,
+  forbidden: TeamProposal[]
+): boolean {
+  return forbidden.some((entry) => proposalsAreEqual(proposal, entry));
+}
+
+function generateProposalDifferentFrom(
+  players: LobbyPlayer[],
+  mode: BalanceMode | undefined,
+  forbidden: TeamProposal[],
+  maxAttempts: number
+): TeamProposal {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const proposal = buildFullProposal(players, mode);
+    if (!isProposalForbidden(proposal, forbidden)) {
+      return proposal;
+    }
+  }
+
+  return buildFullProposal(players, mode);
 }
 
 export function buildFullProposal(
@@ -394,16 +423,27 @@ export function buildFullProposal(
 export function generateDistinctProposals(
   players: LobbyPlayer[],
   mode: BalanceMode | undefined = "classic",
-  maxAttempts = 50
-): { proposalA: TeamProposal; proposalB: TeamProposal } {
-  let proposalA = buildFullProposal(players, mode);
-  let proposalB = buildFullProposal(players, mode);
-  let attempts = 0;
-
-  while (proposalsAreEqual(proposalA, proposalB) && attempts < maxAttempts) {
-    proposalB = buildFullProposal(players, mode);
-    attempts++;
+  options?: {
+    /** Składy, których A/B nie mogą powtórzyć (np. oryginalne losowanie). */
+    exclude?: TeamProposal[];
+    maxAttempts?: number;
   }
+): { proposalA: TeamProposal; proposalB: TeamProposal } {
+  const maxAttempts = options?.maxAttempts ?? 80;
+  const excluded = options?.exclude ?? [];
+
+  const proposalA = generateProposalDifferentFrom(
+    players,
+    mode,
+    excluded,
+    maxAttempts
+  );
+  const proposalB = generateProposalDifferentFrom(
+    players,
+    mode,
+    [...excluded, proposalA],
+    maxAttempts
+  );
 
   return { proposalA, proposalB };
 }
