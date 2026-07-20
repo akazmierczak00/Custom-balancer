@@ -13,7 +13,7 @@ import {
   subscribeToAllUsers,
   subscribeToUsers,
 } from "@/lib/firebase/firestore";
-import { adminDeleteUserProfile, createLobby } from "@/lib/lobby/service";
+import { createLobby } from "@/lib/lobby/service";
 import { getRankLabel } from "@/lib/constants/ranks";
 import { CustomBalancerTitle } from "@/components/brand/custom-balancer-title";
 import { useTheme } from "@/components/providers/theme-provider";
@@ -39,7 +39,6 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
-  const [deletingUid, setDeletingUid] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("lobby");
 
   useEffect(() => {
@@ -83,24 +82,6 @@ export default function DashboardPage() {
       alert(e instanceof Error ? e.message : "Błąd tworzenia lobby");
     } finally {
       setCreating(false);
-    }
-  };
-
-  const handleDeleteUser = async (entry: UserProfile) => {
-    if (!profile || entry.uid === profile.uid) return;
-    const nick = entry.nick || "tego gracza";
-    const confirmed = window.confirm(
-      `Czy na pewno chcesz trwale usunąć profil „${nick}”? Tej operacji nie można cofnąć.`
-    );
-    if (!confirmed) return;
-
-    setDeletingUid(entry.uid);
-    try {
-      await adminDeleteUserProfile(entry.uid);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Nie udało się usunąć profilu");
-    } finally {
-      setDeletingUid(null);
     }
   };
 
@@ -204,40 +185,20 @@ export default function DashboardPage() {
               ) : (
                 <div className="grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2">
                   {manageableUsers.map((entry) => (
-                    <div
+                    <Link
                       key={entry.uid}
-                      className="dashboard-user-row flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2"
+                      href={`/profile/${entry.uid}`}
+                      className="dashboard-user-row flex items-center justify-between rounded-lg border border-slate-700 px-4 py-3 transition-colors hover:border-indigo-500/50"
                     >
-                      <Link
-                        href={`/profile/${entry.uid}`}
-                        className="min-w-0 flex-1 transition-colors hover:text-indigo-300"
-                      >
-                        <span className="block truncate font-medium text-slate-100">
-                          {entry.nick || "Bez nicku"}
-                        </span>
-                        <span className="block truncate text-sm text-slate-400">
-                          {entry.rank
-                            ? getRankLabel(
-                                entry.rank,
-                                entry.rankDivision,
-                                entry.rankLp
-                              )
-                            : "Brak rangi"}
-                        </span>
-                      </Link>
-                      {entry.uid !== profile.uid && (
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="shrink-0"
-                          disabled={deletingUid === entry.uid}
-                          onClick={() => handleDeleteUser(entry)}
-                        >
-                          {deletingUid === entry.uid ? "..." : "Usuń"}
-                        </Button>
-                      )}
-                    </div>
+                      <span className="font-medium text-slate-100">
+                        {entry.nick || "Bez nicku"}
+                      </span>
+                      <span className="text-sm text-slate-400">
+                        {entry.rank
+                          ? getRankLabel(entry.rank, entry.rankDivision, entry.rankLp)
+                          : "Brak rangi"}
+                      </span>
+                    </Link>
                   ))}
                 </div>
               )}
