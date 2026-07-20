@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { fetchAccountByRiotId, RiotApiError } from "@/lib/riot/client";
 import { linkRiotAccount } from "@/lib/riot/sync-user-rank";
 import {
-  assertCanManageProfile,
   AuthError,
   ForbiddenError,
   verifyAuthToken,

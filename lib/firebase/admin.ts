@@ -1,6 +1,7 @@
 import { App, cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { parseServiceAccountJson } from "@/lib/firebase/parse-service-account";
 
 function getServiceAccount() {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -8,13 +9,8 @@ function getServiceAccount() {
     throw new Error("Brak FIREBASE_SERVICE_ACCOUNT_JSON w zmiennych środowiskowych.");
   }
 
-  return JSON.parse(json) as {
-    project_id: string;
-    client_email: string;
-    private_key: string;
-  };
+  return parseServiceAccountJson(json);
 }
-
 function getAdminApp(): App {
   if (getApps().length > 0) {
     return getApps()[0]!;

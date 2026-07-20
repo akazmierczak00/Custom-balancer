@@ -25,12 +25,21 @@ async function riotFetch<T>(url: string): Promise<T> {
     cache: "no-store",
   });
 
+  const text = await response.text();
+
   if (response.status === 404) {
     throw new RiotApiError("Nie znaleziono konta Riot Games.", 404);
   }
 
   if (response.status === 429) {
     throw new RiotApiError("Limit zapytań Riot API — spróbuj za chwilę.", 429);
+  }
+
+  if (response.status === 403) {
+    throw new RiotApiError(
+      "Brak dostępu do Riot API (403). Sprawdź RIOT_API_KEY — klucz developerski wygasa po 24 h.",
+      403
+    );
   }
 
   if (!response.ok) {
@@ -40,7 +49,14 @@ async function riotFetch<T>(url: string): Promise<T> {
     );
   }
 
-  return (await response.json()) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new RiotApiError(
+      "Riot API zwróciło niepoprawną odpowiedź. Sprawdź RIOT_API_KEY.",
+      502
+    );
+  }
 }
 
 export type RiotAccount = {
