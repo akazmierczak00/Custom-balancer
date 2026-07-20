@@ -61,6 +61,15 @@ export function LineupVotePanel({
                 ? "Możesz jeszcze zmienić głos, dopóki nie zagłosują wszyscy"
                 : "Wybierz: zaakceptuj aktualny skład albo zagłosuj za zmianą"}
         </p>
+        {!resultText && (
+          <p className="mt-2 rounded-lg border border-amber-500/25 bg-amber-950/20 px-3 py-2 text-xs text-amber-200/90">
+            Jeśli Adrian zagłosuje na{" "}
+            <span className="font-semibold text-amber-100">zmianę składów</span> i
+            dojdzie do reshuffle, drużyna przeciwna dostaje{" "}
+            <span className="font-semibold text-amber-100">+1 punkt</span> do
+            osłabień w tej grze.
+          </p>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-5 pt-5">
