@@ -1,18 +1,35 @@
 import { NextResponse } from "next/server";
 import { getRankLabel } from "@/lib/constants/ranks";
-import { syncUserRank } from "@/lib/riot/sync-user-rank";
-import {
-  AuthError,
-  ForbiddenError,
-  verifyAuthToken,
-} from "@/lib/riot/verify-auth";
 import { LoLDivision, LoLRank } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
+function errorResponse(error: unknown, fallback: string) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "name" in error &&
+    (error.name === "AuthError" || error.name === "ForbiddenError")
+  ) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : fallback },
+      { status: 403 }
+    );
+  }
+
+  const message = error instanceof Error ? error.message : fallback;
+  return NextResponse.json({ error: message }, { status: 500 });
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { uid?: string };
+
+    const { syncUserRank } = await import("@/lib/riot/sync-user-rank");
+    const { ForbiddenError, verifyAuthToken } = await import("@/lib/riot/verify-auth");
+
     const auth = await verifyAuthToken(request);
     const targetUid = body.uid?.trim() || auth.uid;
 
@@ -53,12 +70,6 @@ export async function POST(request: Request) {
       ),
     });
   } catch (error) {
-    if (error instanceof AuthError || error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
-    }
-
-    const message =
-      error instanceof Error ? error.message : "Nie udało się zsynchronizować rangi.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(error, "Nie udało się zsynchronizować rangi.");
   }
 }

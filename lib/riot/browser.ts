@@ -24,9 +24,11 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   try {
     return JSON.parse(text) as T;
   } catch {
-    const hint =
-      response.status >= 500
-        ? "Sprawdź FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 i RIOT_API_KEY w Vercel → Settings → Environment Variables (Production)."
+    const isHtml = text.trimStart().startsWith("<");
+    const hint = isHtml
+      ? `Vercel zwrócił stronę błędu HTML (HTTP ${response.status}). Otwórz /api/riot/health i sprawdź adminInit oraz logi Functions na Vercel.`
+      : response.status >= 500
+        ? `Błąd serwera (HTTP ${response.status}). Sprawdź logi Functions na Vercel.`
         : `Nieoczekiwana odpowiedź serwera (HTTP ${response.status}).`;
 
     throw new Error(`Serwer zwrócił niepoprawną odpowiedź. ${hint}`);

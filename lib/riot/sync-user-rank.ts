@@ -90,12 +90,15 @@ export async function linkRiotAccount(
   puuid: string
 ) {
   const db = getFirebaseAdminFirestore();
-  await db.collection("users").doc(uid).update({
-    riotGameName: gameName.trim(),
-    riotTagLine: tagLine.trim(),
-    riotPuuid: puuid,
-    riotLinkedAt: Timestamp.now(),
-  });
+  await db.collection("users").doc(uid).set(
+    {
+      riotGameName: gameName.trim(),
+      riotTagLine: tagLine.trim(),
+      riotPuuid: puuid,
+      riotLinkedAt: Timestamp.now(),
+    },
+    { merge: true }
+  );
 }
 
 export async function syncAllEligibleUserRanks() {

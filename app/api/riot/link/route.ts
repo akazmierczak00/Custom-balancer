@@ -1,14 +1,35 @@
 import { NextResponse } from "next/server";
-import { fetchAccountByRiotId, RiotApiError } from "@/lib/riot/client";
-import { linkRiotAccount } from "@/lib/riot/sync-user-rank";
-import {
-  AuthError,
-  ForbiddenError,
-  verifyAuthToken,
-} from "@/lib/riot/verify-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
+function errorResponse(error: unknown, fallback: string) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "name" in error &&
+    (error.name === "AuthError" || error.name === "ForbiddenError")
+  ) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : fallback },
+      { status: 403 }
+    );
+  }
+
+  if (error && typeof error === "object" && "name" in error && error.name === "RiotApiError") {
+    const status =
+      "status" in error && typeof error.status === "number" ? error.status : 502;
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : fallback },
+      { status }
+    );
+  }
+
+  const message = error instanceof Error ? error.message : fallback;
+  return NextResponse.json({ error: message }, { status: 500 });
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -27,6 +48,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const { fetchAccountByRiotId } = await import("@/lib/riot/client");
+    const { linkRiotAccount } = await import("@/lib/riot/sync-user-rank");
+    const { ForbiddenError, verifyAuthToken } = await import("@/lib/riot/verify-auth");
+
     const auth = await verifyAuthToken(request);
     const targetUid = body.uid?.trim() || auth.uid;
 
@@ -43,16 +68,6 @@ export async function POST(request: Request) {
       puuid: account.puuid,
     });
   } catch (error) {
-    if (error instanceof AuthError || error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
-    }
-
-    if (error instanceof RiotApiError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
-    }
-
-    const message =
-      error instanceof Error ? error.message : "Nie udało się podpiąć konta Riot.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(error, "Nie udało się podpiąć konta Riot.");
   }
 }

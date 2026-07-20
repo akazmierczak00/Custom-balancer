@@ -2,6 +2,14 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
+  "functions": {
+    "app/api/riot/**/*.ts": {
+      "maxDuration": 30
+    },
+    "app/api/cron/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/sync-riot-ranks",
