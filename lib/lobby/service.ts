@@ -5,11 +5,13 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
   runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/config";
 import {
@@ -44,6 +46,7 @@ import {
 } from "@/lib/lobby/firestore-lobby";
 import {
   buildBotProfileFromUser,
+  botUidForUser,
   isRealUserProfile,
   isTestBotUid,
   pickBotSourceProfiles,
@@ -1245,6 +1248,48 @@ export async function saveUserProfile(
   const { role, email, wins, losses, matchHistory, achievements, createdAt, ...safe } =
     data;
   await updateDoc(doc(getFirebaseDb(), "users", uid), safe);
+}
+
+/**
+ * Admin: usuwa profil Firestore użytkownika (oraz powiązanego bota testowego).
+ * Wyrzuca z otwartych / confirming lobby. Blokuje, gdy użytkownik jest w aktywnym meczu.
+ * Nie usuwa konta Firebase Auth (wymaga Admin SDK po stronie serwera).
+ */
+export async function adminDeleteUserProfile(targetUid: string) {
+  if (!targetUid) throw new Error("Brak użytkownika");
+
+  const db = getFirebaseDb();
+  const targetRef = doc(db, "users", targetUid);
+  const targetSnap = await getDoc(targetRef);
+  if (!targetSnap.exists()) {
+    throw new Error("Profil nie istnieje");
+  }
+
+  const lobbiesSnap = await getDocs(
+    query(collection(db, "lobbies"), where("slots", "array-contains", targetUid))
+  );
+
+  for (const lobbyDoc of lobbiesSnap.docs) {
+    const lobby = lobbyDoc.data() as Lobby;
+    if (lobby.status !== "open" && lobby.status !== "confirming") {
+      throw new Error(
+        "Nie można usunąć profilu — użytkownik uczestniczy w aktywnym lobby. Zakończ sesję lub poczekaj na koniec gry."
+      );
+    }
+  }
+
+  for (const lobbyDoc of lobbiesSnap.docs) {
+    await leaveLobby(lobbyDoc.id, targetUid);
+  }
+
+  const botUid = botUidForUser(targetUid);
+  const botRef = doc(db, "users", botUid);
+  const botSnap = await getDoc(botRef);
+  if (botSnap.exists()) {
+    await deleteDoc(botRef);
+  }
+
+  await deleteDoc(targetRef);
 }
 
 export async function createWeakness(data: WeaknessFormInput) {
