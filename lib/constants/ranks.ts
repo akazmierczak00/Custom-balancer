@@ -28,6 +28,13 @@ const DIVISION_OFFSET: Record<LoLDivision, number> = {
   I: 3,
 };
 
+/** Stałe punkty Master+ — bez LP (Diamond I = 31, skok +4 na tier). */
+const MASTER_PLUS_FIXED_POINTS: Record<"master" | "grandmaster" | "challenger", number> = {
+  master: 35,
+  grandmaster: 39,
+  challenger: 43,
+};
+
 export const RANK_POINTS: Record<LoLRank, number> = RANKS.reduce(
   (acc, rank) => {
     acc[rank.value] = rank.points;
@@ -39,16 +46,15 @@ export const RANK_POINTS: Record<LoLRank, number> = RANKS.reduce(
 export function getRankPoints(
   rank: LoLRank | "",
   division?: LoLDivision | "",
-  lp?: number
+  _lp?: number
 ): number {
   if (!rank) return 0;
 
-  const base = RANK_POINTS[rank];
-
   if (MASTER_PLUS_TIERS.has(rank)) {
-    return base * 4 + (lp ?? 0) / 100;
+    return MASTER_PLUS_FIXED_POINTS[rank as keyof typeof MASTER_PLUS_FIXED_POINTS];
   }
 
+  const base = RANK_POINTS[rank];
   const divisionOffset =
     division && division in DIVISION_OFFSET
       ? DIVISION_OFFSET[division as LoLDivision]
