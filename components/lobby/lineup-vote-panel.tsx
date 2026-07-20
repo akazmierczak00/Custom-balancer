@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
+import { VoteVoterList } from "@/components/lobby/vote-voter-list";
 import { castLineupVote, castLineupVoteForTeam } from "@/lib/lobby/service";
 import { cn } from "@/lib/utils";
 import { Lobby, LineupVoteChoice } from "@/types";
@@ -147,7 +148,10 @@ export function LineupVotePanel({
                 {myVote === "accept" && (
                   <p className="mt-3 text-xs font-medium text-emerald-400">Twój głos</p>
                 )}
-                <VoterList names={acceptVoters} emptyLabel="Brak głosów" accent="emerald" />
+                <VoteVoterList
+                  names={acceptVoters}
+                  accentClassName="text-emerald-400/70"
+                />
               </button>
 
               <button
@@ -179,7 +183,10 @@ export function LineupVotePanel({
                 {myVote === "reshuffle" && (
                   <p className="mt-3 text-xs font-medium text-rose-400">Twój głos</p>
                 )}
-                <VoterList names={reshuffleVoters} emptyLabel="Brak głosów" accent="rose" />
+                <VoteVoterList
+                  names={reshuffleVoters}
+                  accentClassName="text-rose-400/70"
+                />
               </button>
             </div>
 
@@ -223,39 +230,5 @@ export function LineupVotePanel({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function VoterList({
-  names,
-  emptyLabel,
-  accent,
-}: {
-  names: string[];
-  emptyLabel: string;
-  accent: "emerald" | "rose";
-}) {
-  return (
-    <div className="mt-auto border-t border-slate-700/50 pt-3">
-      <p
-        className={cn(
-          "mb-1.5 text-[10px] font-semibold uppercase tracking-wide",
-          accent === "emerald" ? "text-emerald-400/70" : "text-rose-400/70"
-        )}
-      >
-        Zagłosowali
-      </p>
-      {names.length === 0 ? (
-        <p className="text-[11px] text-slate-500">{emptyLabel}</p>
-      ) : (
-        <ul className="max-h-24 space-y-0.5 overflow-y-auto text-[11px] leading-snug text-slate-300">
-          {names.map((name) => (
-            <li key={name} className="truncate">
-              {name}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }

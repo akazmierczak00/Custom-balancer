@@ -1,11 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamOverview } from "@/components/lobby/team-overview";
+import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
+import { VoteVoterList } from "@/components/lobby/vote-voter-list";
 import { castProposalVote, castProposalVoteForTeam } from "@/lib/lobby/service";
 import { cn } from "@/lib/utils";
-import { Lobby } from "@/types";
+import { Lobby, ProposalVoteChoice } from "@/types";
 
 interface ProposalVotePanelProps {
   lobby: Lobby;
@@ -22,6 +25,7 @@ export function ProposalVotePanel({
   remaining,
   isAdmin = false,
 }: ProposalVotePanelProps) {
+  const lobbyUsers = useLobbyUsers();
   const votes = lobby.votes.proposals;
   const countA = Object.values(votes).filter((v) => v === "A").length;
   const countB = Object.values(votes).filter((v) => v === "B").length;
@@ -30,6 +34,38 @@ export function ProposalVotePanel({
   const totalVotes = Math.max(votedCount, 1);
   const shareA = (countA / totalVotes) * 100;
   const shareB = (countB / totalVotes) * 100;
+
+  const nickByUid = useMemo(() => {
+    const map = new Map<string, string>();
+    const players = [
+      ...lobby.team1,
+      ...lobby.team2,
+      ...(lobby.proposalA?.team1 ?? []),
+      ...(lobby.proposalA?.team2 ?? []),
+      ...(lobby.proposalB?.team1 ?? []),
+      ...(lobby.proposalB?.team2 ?? []),
+    ];
+    for (const player of players) {
+      map.set(player.uid, player.nick);
+    }
+    if (lobbyUsers) {
+      for (const [uid, profile] of Object.entries(lobbyUsers)) {
+        if (!map.has(uid) && profile.nick) {
+          map.set(uid, profile.nick);
+        }
+      }
+    }
+    return map;
+  }, [lobby.team1, lobby.team2, lobby.proposalA, lobby.proposalB, lobbyUsers]);
+
+  const votersFor = (choice: ProposalVoteChoice) =>
+    Object.entries(votes)
+      .filter(([, vote]) => vote === choice)
+      .map(([uid]) => nickByUid.get(uid) ?? uid.slice(0, 6))
+      .sort((a, b) => a.localeCompare(b, "pl"));
+
+  const votersA = votersFor("A");
+  const votersB = votersFor("B");
 
   const vote = async (choice: "A" | "B") => {
     try {
@@ -80,7 +116,7 @@ export function ProposalVotePanel({
             disabled={locked || myVote === "A"}
             onClick={() => void vote("A")}
             className={cn(
-              "min-w-0 space-y-4 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4",
+              "flex min-w-0 flex-col space-y-4 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4",
               myVote === "A"
                 ? "border-sky-500/50 bg-sky-950/25 ring-1 ring-sky-400/30"
                 : "border-slate-700/80 bg-slate-800/30",
@@ -128,6 +164,8 @@ export function ProposalVotePanel({
                 />
               </div>
             )}
+
+            <VoteVoterList names={votersA} accentClassName="text-sky-400/70" />
           </button>
 
           <button
@@ -135,7 +173,7 @@ export function ProposalVotePanel({
             disabled={locked || myVote === "B"}
             onClick={() => void vote("B")}
             className={cn(
-              "min-w-0 space-y-4 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4",
+              "flex min-w-0 flex-col space-y-4 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4",
               myVote === "B"
                 ? "border-teal-500/50 bg-teal-950/25 ring-1 ring-teal-400/30"
                 : "border-slate-700/80 bg-slate-800/30",
@@ -183,6 +221,8 @@ export function ProposalVotePanel({
                 />
               </div>
             )}
+
+            <VoteVoterList names={votersB} accentClassName="text-teal-400/70" />
           </button>
         </div>
 
