@@ -42,9 +42,10 @@ import {
   toFirestoreWeaknesses,
 } from "@/lib/lobby/firestore-lobby";
 import {
-  getAvailableTestBots,
+  buildBotProfileFromUser,
+  isRealUserProfile,
   isTestBotUid,
-  TEST_BOT_DEFINITIONS,
+  pickBotSourceProfiles,
 } from "@/lib/lobby/test-bots";
 import {
   BalanceMode,
@@ -277,22 +278,13 @@ export async function exitLobbyRoom(lobbyId: string, uid: string) {
   });
 }
 
-export async function seedTestBotProfiles() {
-  for (const bot of TEST_BOT_DEFINITIONS) {
+export async function seedTestBotProfilesFromUsers(sources: UserProfile[]) {
+  for (const source of sources) {
+    const bot = buildBotProfileFromUser(source);
     await setDoc(
       doc(getFirebaseDb(), "users", bot.uid),
       {
-        email: `${bot.uid}@test.local`,
-        role: "user",
-        nick: bot.nick,
-        rank: bot.rank,
-        rolePriorities: bot.rolePriorities,
-        wins: bot.wins,
-        losses: bot.losses,
-        matchHistory: bot.matchHistory,
-        profileComplete: true,
-        achievements: [],
-        isTestBot: true,
+        ...bot,
         createdAt: serverTimestamp(),
       },
       { merge: true }
@@ -301,35 +293,65 @@ export async function seedTestBotProfiles() {
 }
 
 export async function fillLobbyWithTestBots(lobbyId: string) {
-  await seedTestBotProfiles();
-
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const lobbySnap = await getDoc(lobbyRef);
+  if (!lobbySnap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = lobbySnap.data() as Lobby;
+  if (lobby.status !== "open") {
+    throw new Error("Można wypełnić botami tylko otwarte lobby");
+  }
+
+  const emptySlots = lobby.slots.filter((slot) => slot === null).length;
+  if (emptySlots === 0) {
+    throw new Error("Brak wolnych slotów");
+  }
+
+  const usersSnap = await getDocs(collection(getFirebaseDb(), "users"));
+  const realUsers = usersSnap.docs
+    .map((entry) => ({ uid: entry.id, ...entry.data() }) as UserProfile)
+    .filter(isRealUserProfile)
+    .sort((a, b) => a.nick.localeCompare(b.nick, "pl"));
+
+  const seatedUids = lobby.slots.filter(Boolean) as string[];
+  const sources = pickBotSourceProfiles(realUsers, seatedUids, emptySlots);
+  await seedTestBotProfilesFromUsers(sources);
+
   await runTransaction(getFirebaseDb(), async (tx) => {
     const snap = await tx.get(lobbyRef);
     if (!snap.exists()) throw new Error("Lobby nie istnieje");
 
-    const lobby = snap.data() as Lobby;
-    if (lobby.status !== "open") {
+    const current = snap.data() as Lobby;
+    if (current.status !== "open") {
       throw new Error("Można wypełnić botami tylko otwarte lobby");
     }
 
-    const slots = [...lobby.slots];
-    const used = slots.filter(Boolean) as string[];
-    const available = getAvailableTestBots(used);
+    const slots = [...current.slots];
+    const used = new Set(slots.filter(Boolean) as string[]);
+    let sourceIndex = 0;
 
-    let botIndex = 0;
-    for (let i = 0; i < slots.length && botIndex < available.length; i++) {
-      if (slots[i] === null) {
-        slots[i] = available[botIndex].uid;
-        botIndex++;
+    for (let i = 0; i < slots.length && sourceIndex < sources.length; i++) {
+      if (slots[i] !== null) continue;
+
+      while (sourceIndex < sources.length) {
+        const botUid = buildBotProfileFromUser(sources[sourceIndex]!).uid;
+        sourceIndex++;
+        if (used.has(botUid)) continue;
+        slots[i] = botUid;
+        used.add(botUid);
+        break;
       }
     }
 
-    if (botIndex === 0) {
-      throw new Error("Brak wolnych slotów lub dostępnych botów");
+    const filledBots = slots.filter(
+      (uid) => uid && isTestBotUid(uid) && !current.slots.includes(uid)
+    ).length;
+
+    if (filledBots === 0) {
+      throw new Error("Nie udało się dodać botów do lobby");
     }
 
-    const acceptances = { ...lobby.acceptances };
+    const acceptances = { ...current.acceptances };
     for (const uid of slots) {
       if (uid && isTestBotUid(uid)) {
         acceptances[uid] = true;
@@ -342,7 +364,7 @@ export async function fillLobbyWithTestBots(lobbyId: string) {
       updatedAt: serverTimestamp(),
     };
 
-    const nextLobby = { ...lobby, slots };
+    const nextLobby = { ...current, slots };
     if (shouldStartConfirmPhase(nextLobby)) {
       Object.assign(updates, confirmPhaseUpdates());
     }
