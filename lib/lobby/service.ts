@@ -1296,7 +1296,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       break;
     case "overview":
       updates.phaseTimerEndsAt = null;
-      updates.votes = { ...defaultVotes(), locked: true };
+      updates.votes = defaultVotes();
       updates.proposalA = null;
       updates.proposalB = null;
       break;
