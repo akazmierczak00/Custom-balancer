@@ -35,11 +35,24 @@ function getPriorityList(player: LobbyPlayer): LoLRole[] {
     .flatMap((g) => g.roles);
 }
 
+function getRolePriorityGroup(
+  player: LobbyPlayer,
+  role: LoLRole
+): { priority: number; roles: LoLRole[] } | undefined {
+  return player.rolePriorities.find((group) => group.roles.includes(role));
+}
+
+/**
+ * Siła preferencji roli.
+ * Role w tym samym priorytecie (=) dzielą punkty — kto ma wyraźne ">"
+ * (jedna rola w grupie) wygrywa z kimś, kto ma "A = B = C".
+ */
 function rolePreferenceScore(player: LobbyPlayer, role: LoLRole): number {
-  const priorities = getPriorityList(player);
-  const index = priorities.indexOf(role);
-  if (index === -1) return 0;
-  return Math.max(0, 5 - index);
+  const group = getRolePriorityGroup(player, role);
+  if (!group || group.roles.length === 0) return 0;
+
+  const base = (6 - group.priority) * 10;
+  return base / group.roles.length;
 }
 
 function teamPointsSum(team: LobbyPlayer[]): number {
@@ -242,9 +255,8 @@ function softConstraintPenalty(
   for (const assignment of [...proposal.team1, ...proposal.team2]) {
     const player = [...team1, ...team2].find((p) => p.uid === assignment.uid);
     if (!player) continue;
-    const prefs = getPriorityList(player);
-    const index = prefs.indexOf(assignment.role);
-    if (index === -1 || index >= 3) penalty += 2;
+    const group = getRolePriorityGroup(player, assignment.role);
+    if (!group || group.priority >= 4) penalty += 2;
   }
 
   return penalty;

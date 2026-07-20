@@ -14,7 +14,8 @@ export const BALANCE_MODES: {
   {
     value: "roles",
     label: "Role",
-    description: "Preferuje priorytety ról przy podziale drużyn (P1–P2).",
+    description:
+      "Preferuje wyraźne priorytety ról (>) — przy „=” ustępuje osobie z silniejszą preferencją.",
   },
   {
     value: "score",
