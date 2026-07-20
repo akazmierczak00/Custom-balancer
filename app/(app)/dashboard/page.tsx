@@ -18,12 +18,13 @@ import { getRankLabel } from "@/lib/constants/ranks";
 import { CustomBalancerTitle } from "@/components/brand/custom-balancer-title";
 import { useTheme } from "@/components/providers/theme-provider";
 import { LobbyTile } from "@/components/lobby/lobby-tile";
+import { CreateLobbyDialog } from "@/components/lobby/create-lobby-dialog";
 import { DashboardY2kDecorations } from "@/components/dashboard/dashboard-y2k-decorations";
 import { DashboardChampionsPanel } from "@/components/dashboard/dashboard-champions-panel";
 import { useVisibleSubscription } from "@/hooks/use-visible-subscription";
 import { isTestBotUid } from "@/lib/lobby/test-bots";
 import { cn } from "@/lib/utils";
-import { Lobby, UserProfile } from "@/types";
+import { BalanceMode, Lobby, UserProfile } from "@/types";
 
 type DashboardTab = "lobby" | "champions";
 
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [creating, setCreating] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("lobby");
 
@@ -70,11 +72,12 @@ export default function DashboardPage() {
     }
   }, [isAdmin, activeTab]);
 
-  const handleCreateLobby = async () => {
+  const handleCreateLobby = async (mode: BalanceMode) => {
     if (!profile) return;
     setCreating(true);
     try {
-      await createLobby(profile.uid);
+      await createLobby(profile.uid, mode);
+      setCreateDialogOpen(false);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd tworzenia lobby");
     } finally {
@@ -107,7 +110,7 @@ export default function DashboardPage() {
         </Button>
       )}
       {isAdmin && (
-        <Button onClick={handleCreateLobby} disabled={creating}>
+        <Button onClick={() => setCreateDialogOpen(true)} disabled={creating}>
           {creating ? "Tworzenie..." : "Utwórz lobby"}
         </Button>
       )}
@@ -238,6 +241,15 @@ export default function DashboardPage() {
         </>
       )}
       </div>
+
+      {isAdmin && (
+        <CreateLobbyDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          creating={creating}
+          onConfirm={handleCreateLobby}
+        />
+      )}
     </div>
   );
 }

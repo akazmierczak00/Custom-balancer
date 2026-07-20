@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RoundLineupCompact } from "@/components/lobby/round-lineup-compact";
 import { formatLobbyPlayedDate, formatRoundCount } from "@/lib/lobby/format";
+import { getBalanceModeLabel } from "@/lib/constants/balance-modes";
 import { joinLobby, leaveLobby, fillLobbyWithTestBots, deleteLobby } from "@/lib/lobby/service";
 import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
@@ -82,7 +83,7 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
           <p className="lobby-tile-card-subtitle text-sm text-slate-400">
             {isCompleted
               ? `Zakończone · ${formatRoundCount(roundCount)}${playedDate ? ` · ${playedDate}` : ""}`
-              : `Status: ${lobby.status} · ${filled}/10`}
+              : `Status: ${lobby.status} · ${filled}/10 · ${getBalanceModeLabel(lobby.balanceMode)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

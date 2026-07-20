@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
+import { getTeamPointsFromAssignments } from "@/lib/algorithms/balanceTeams";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
 import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ interface TeamOverviewProps {
   winnerTeam?: 1 | 2;
   useLiveStats?: boolean;
   showRolePriorities?: boolean;
+  showTeamPoints?: boolean;
 }
 
 function enrichPlayer(
@@ -46,6 +48,7 @@ export function TeamOverview({
   winnerTeam,
   useLiveStats = true,
   showRolePriorities = false,
+  showTeamPoints = true,
 }: TeamOverviewProps) {
   const team1 = team1Override ?? lobby.team1;
   const team2 = team2Override ?? lobby.team2;
@@ -57,6 +60,16 @@ export function TeamOverview({
     () => [...new Set([...team1, ...team2].map((player) => player.uid))],
     [team1, team2]
   );
+
+  const team1Points = useMemo(
+    () => (team1.length ? getTeamPointsFromAssignments(team1) : 0),
+    [team1]
+  );
+  const team2Points = useMemo(
+    () => (team2.length ? getTeamPointsFromAssignments(team2) : 0),
+    [team2]
+  );
+  const pointsDiff = Math.abs(team1Points - team2Points);
 
   useEffect(() => {
     if (!useLiveStats || lobbyUsers) {
@@ -75,6 +88,18 @@ export function TeamOverview({
 
   return (
     <div className="min-w-0 space-y-3">
+      {showTeamPoints && team1.length > 0 && team2.length > 0 && (
+        <p className="text-center text-xs text-slate-400">
+          Punkty: Team 1{" "}
+          <span className="font-semibold text-slate-200">{team1Points}</span>
+          {" · "}
+          Team 2{" "}
+          <span className="font-semibold text-slate-200">{team2Points}</span>
+          {" · "}
+          różnica{" "}
+          <span className="font-semibold text-slate-300">{pointsDiff}</span>
+        </p>
+      )}
       <div
         className={cn(
           "grid min-w-0 items-center text-center",

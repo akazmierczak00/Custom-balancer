@@ -39,6 +39,7 @@ import {
   startWeaknessReveal,
 } from "@/lib/lobby/service";
 import { getWeaknessCellIndex, WEAKNESS_REVEAL_DELAY_MS } from "@/lib/algorithms/drawWeaknesses";
+import { getBalanceModeLabel } from "@/lib/constants/balance-modes";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyRoomProps {
@@ -336,6 +337,8 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           <p className="text-sm text-slate-400">
             Status: {lobby.status}
             {lobby.status === "open" ? ` · ${filledSlots}/10` : ""}
+            {" · "}
+            Losowanie: {getBalanceModeLabel(lobby.balanceMode)}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">

@@ -47,6 +47,7 @@ import {
   TEST_BOT_DEFINITIONS,
 } from "@/lib/lobby/test-bots";
 import {
+  BalanceMode,
   Lobby,
   LobbyPlayer,
   LobbyStatus,
@@ -59,6 +60,7 @@ import {
   Weakness,
   WeaknessCell,
 } from "@/types";
+import { normalizeBalanceMode } from "@/lib/constants/balance-modes";
 
 const LOBBY_SIZE = 10;
 const PRE_REVEAL_SECONDS = 10;
@@ -148,10 +150,14 @@ async function refreshTeamAssignments(
   return refreshed;
 }
 
-export async function createLobby(adminUid: string): Promise<string> {
+export async function createLobby(
+  adminUid: string,
+  balanceMode: BalanceMode = "classic"
+): Promise<string> {
   const ref = await addDoc(collection(getFirebaseDb(), "lobbies"), {
     createdBy: adminUid,
     status: "open" as LobbyStatus,
+    balanceMode: normalizeBalanceMode(balanceMode),
     slots: emptySlots(),
     presentUids: {},
     acceptances: {},
@@ -495,7 +501,7 @@ export async function draftTeams(lobbyId: string) {
   const lobby = lobbySnap.data() as Lobby;
   const uids = lobby.slots.filter(Boolean) as string[];
   const players = await fetchLobbyPlayers(uids);
-  const proposal = buildFullProposal(players);
+  const proposal = buildFullProposal(players, lobby.balanceMode);
 
   await updateDoc(lobbyRef, {
     team1: toFirestoreTeam(proposal.team1),
@@ -632,7 +638,10 @@ export async function resolveLineupVote(lobbyId: string) {
   if (reshuffleCount >= 6) {
     const uids = lobby.slots.filter(Boolean) as string[];
     const players = await fetchLobbyPlayers(uids);
-    const { proposalA, proposalB } = generateDistinctProposals(players);
+    const { proposalA, proposalB } = generateDistinctProposals(
+      players,
+      lobby.balanceMode
+    );
 
     await updateDoc(lobbyRef, {
       status: "reshuffle_reveal",
@@ -1279,7 +1288,10 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
         throw new Error("Lobby musi być pełne, aby wygenerować propozycje A/B");
       }
       const players = await fetchLobbyPlayers(uids);
-      const { proposalA, proposalB } = generateDistinctProposals(players);
+      const { proposalA, proposalB } = generateDistinctProposals(
+        players,
+        lobby.balanceMode
+      );
       updates.proposalA = toFirestoreProposal(proposalA);
       updates.proposalB = toFirestoreProposal(proposalB);
       updates.revealRoleIndex = 0;
@@ -1298,7 +1310,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
           throw new Error("Brak propozycji A/B — uzupełnij lobby");
         }
         const players = await fetchLobbyPlayers(uids);
-        const proposals = generateDistinctProposals(players);
+        const proposals = generateDistinctProposals(players, lobby.balanceMode);
         proposalA = proposals.proposalA;
         proposalB = proposals.proposalB;
       }

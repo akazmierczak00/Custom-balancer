@@ -1,4 +1,5 @@
 import { normalizeDrawnWeaknesses } from "@/lib/algorithms/drawWeaknesses";
+import { normalizeBalanceMode } from "@/lib/constants/balance-modes";
 import { formatRolePriorities } from "@/lib/constants/roles";
 import {
   Lobby,
@@ -72,6 +73,7 @@ export function normalizeTeamProposal(proposal: TeamProposal): TeamProposal {
 export function normalizeLobby(data: Lobby): Lobby {
   return {
     ...data,
+    balanceMode: normalizeBalanceMode(data.balanceMode),
     presentUids: data.presentUids ?? {},
     roundHistory: (data.roundHistory ?? []).map((round) => ({
       ...round,

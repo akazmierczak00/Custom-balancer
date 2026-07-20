@@ -63,6 +63,13 @@ export interface Weakness {
   createdAt: Timestamp;
 }
 
+export type BalanceMode =
+  | "classic"
+  | "roles"
+  | "score"
+  | "fair_lanes"
+  | "chaos";
+
 export type LobbyStatus =
   | "open"
   | "confirming"
@@ -169,6 +176,8 @@ export interface Lobby {
   id: string;
   createdBy: string;
   status: LobbyStatus;
+  /** Tryb losowania składów — domyślnie classic dla starych lobby. */
+  balanceMode?: BalanceMode;
   slots: (string | null)[];
   presentUids?: Record<string, boolean>;
   acceptances: Record<string, boolean>;

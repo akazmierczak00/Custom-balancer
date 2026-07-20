@@ -81,12 +81,31 @@ for (let i = 1; i <= 5; i++) {
   console.log("");
 }
 
-console.log("=== 1 PEŁNA PROPOZYCJA (drużyny + role) ===\n");
 const proposal = buildFullProposal(roster);
+const proposalRoles = buildFullProposal(roster, "roles");
 
+console.log("=== 1 PEŁNA PROPOZYCJA classic ===\n");
 for (const [label, team] of [
   ["Team 1", proposal.team1],
   ["Team 2", proposal.team2],
+] as const) {
+  const sum = team.reduce(
+    (s, p) => s + getRankPoints(p.rank as never, p.rankDivision),
+    0
+  );
+  console.log(`${label} (${sum} pkt):`);
+  for (const p of team) {
+    console.log(
+      `  ${p.nick.padEnd(8)} ${getRankLabel(p.rank as never, p.rankDivision).padEnd(14)} → ${p.role.toUpperCase()}`
+    );
+  }
+  console.log("");
+}
+
+console.log("=== 1 PEŁNA PROPOZYCJA roles ===\n");
+for (const [label, team] of [
+  ["Team 1", proposalRoles.team1],
+  ["Team 2", proposalRoles.team2],
 ] as const) {
   const sum = team.reduce(
     (s, p) => s + getRankPoints(p.rank as never, p.rankDivision),
