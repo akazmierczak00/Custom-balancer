@@ -89,6 +89,7 @@ function RoundSummaryCard({ lobby, round, isAdmin }: RoundSummaryCardProps) {
           useLiveStats={false}
           compact
           showRolePriorities={isAdmin}
+          showTeamPoints={isAdmin}
         />
 
         {round.selectedWeaknesses.length > 0 && (

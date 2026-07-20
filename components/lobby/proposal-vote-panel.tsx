@@ -124,6 +124,7 @@ export function ProposalVotePanel({
                   compact
                   currentUid={currentUid}
                   showRolePriorities={isAdmin}
+                  showTeamPoints={isAdmin}
                 />
               </div>
             )}
@@ -178,6 +179,7 @@ export function ProposalVotePanel({
                   compact
                   currentUid={currentUid}
                   showRolePriorities={isAdmin}
+                  showTeamPoints={isAdmin}
                 />
               </div>
             )}

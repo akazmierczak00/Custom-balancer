@@ -48,7 +48,7 @@ export function TeamOverview({
   winnerTeam,
   useLiveStats = true,
   showRolePriorities = false,
-  showTeamPoints = true,
+  showTeamPoints = false,
 }: TeamOverviewProps) {
   const team1 = team1Override ?? lobby.team1;
   const team2 = team2Override ?? lobby.team2;

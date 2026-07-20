@@ -420,6 +420,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           lobby={lobby}
           currentUid={profile.uid}
           showRolePriorities={adminView}
+          showTeamPoints={adminView}
           votes={
             lobby.status === "voting_lineup" || lobby.status === "locked_lineup"
               ? lobby.votes.lineup
