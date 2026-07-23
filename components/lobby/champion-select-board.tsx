@@ -76,8 +76,23 @@ function TeamBanColumn({
   hoverBanNone: boolean;
   align: "start" | "end";
 }) {
-  const extraBans = bans.slice(0, extraCount);
-  const regularBans = bans.slice(extraCount);
+  /** Sloty ban1 to 0–2; ekstra bany zaczynają się od 3; ban2 idzie po ekstra. */
+  const ban1Count = 3;
+  const extraStart = ban1Count;
+  const regularIndices =
+    extraCount > 0
+      ? [
+          ...Array.from({ length: ban1Count }, (_, i) => i),
+          ...Array.from(
+            { length: Math.max(0, bans.length - ban1Count - extraCount) },
+            (_, i) => ban1Count + extraCount + i
+          ),
+        ]
+      : bans.map((_, i) => i);
+  const extraIndices =
+    extraCount > 0
+      ? Array.from({ length: extraCount }, (_, i) => extraStart + i)
+      : [];
   const justify = align === "start" ? "justify-start" : "justify-end";
 
   const slotProps = (i: number, size: "sm" | "md") => {
@@ -94,20 +109,17 @@ function TeamBanColumn({
 
   return (
     <div className={cn("flex flex-col gap-1", align === "start" ? "items-start" : "items-end")}>
-      {extraBans.length > 0 && (
+      {extraIndices.length > 0 && (
         <div className={cn("flex gap-1", justify)}>
-          {extraBans.map((_, i) => (
-            <BanSlot key={`b${team}-extra-${i}`} {...slotProps(i, "sm")} />
+          {extraIndices.map((slot) => (
+            <BanSlot key={`b${team}-extra-${slot}`} {...slotProps(slot, "sm")} />
           ))}
         </div>
       )}
       <div className={cn("flex gap-1.5", justify)}>
-        {regularBans.map((_, i) => {
-          const slot = i + extraCount;
-          return (
-            <BanSlot key={`b${team}-${slot}`} {...slotProps(slot, "md")} />
-          );
-        })}
+        {regularIndices.map((slot) => (
+          <BanSlot key={`b${team}-${slot}`} {...slotProps(slot, "md")} />
+        ))}
       </div>
     </div>
   );

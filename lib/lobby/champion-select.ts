@@ -177,7 +177,7 @@ function shouldSkipAdrianTeamBan(
 
 /**
  * Buduje tury z obostrzeń:
- * - ekstra bany przeciwnika na początku (P1)
+ * - ekstra bany przeciwnika po ban1, przed pick1 (P1)
  * - skip banów drużyny Adriana
  */
 export function buildChampionSelectTurns(
@@ -191,20 +191,22 @@ export function buildChampionSelectTurns(
     : null;
 
   const turns: ChampionSelectTurnSnapshot[] = [];
+  let extrasInserted = false;
 
-  if (extra > 0 && enemyTeam) {
+  const insertExtraBans = () => {
+    if (extrasInserted || !(extra > 0 && enemyTeam)) return;
+    extrasInserted = true;
     for (let i = 0; i < extra; i++) {
       turns.push({
         phase: "ban1",
         kind: "ban",
         team: enemyTeam,
         orderIndex: 0,
-        banSlot: i,
+        /** Po slotach ban1 (0–2), przed ban2. */
+        banSlot: 3 + i,
       });
     }
-  }
-
-  const enemyBanOffset = enemyTeam && extra > 0 ? extra : 0;
+  };
 
   for (const base of CHAMPION_SELECT_TURNS) {
     if (
@@ -214,9 +216,19 @@ export function buildChampionSelectTurns(
       continue;
     }
 
+    if (base.phase !== "ban1") {
+      insertExtraBans();
+    }
+
     let banSlot = base.banSlot;
-    if (base.kind === "ban" && banSlot != null && enemyTeam && base.team === enemyTeam) {
-      banSlot = banSlot + enemyBanOffset;
+    if (
+      base.kind === "ban" &&
+      banSlot != null &&
+      enemyTeam &&
+      base.team === enemyTeam &&
+      banSlot >= 3
+    ) {
+      banSlot = banSlot + extra;
     }
 
     turns.push({
@@ -228,6 +240,7 @@ export function buildChampionSelectTurns(
     });
   }
 
+  insertExtraBans();
   return turns;
 }
 
@@ -602,7 +615,7 @@ export function describeDraftModifiers(modifiers: DraftModifiers | null): string
     lines.push("Pick w 1. fazie — Adrian w pierwszej trójce");
   }
   if (modifiers.extraBans > 0) {
-    lines.push(`+${modifiers.extraBans} banów dla przeciwnika (P1)`);
+    lines.push(`+${modifiers.extraBans} banów po ban1 dla przeciwnika (P1)`);
   }
   if (modifiers.noBans === "all") {
     lines.push("Brak banów drużyny Adriana");

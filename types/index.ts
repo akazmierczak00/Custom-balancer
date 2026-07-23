@@ -236,7 +236,7 @@ export type NoHelpMode = "ban" | "pick" | "all" | null;
 export interface DraftModifiers {
   adrianUid: string;
   adrianTeam: 1 | 2;
-  /** Przeciwnik Adriana dostaje tyle ekstra banów na starcie ban1 (P1 ich robi). */
+  /** Przeciwnik Adriana dostaje tyle ekstra banów po ban1, przed pick1 (P1 ich robi). */
   extraBans: number;
   noBans: NoBansMode;
   pickOrderMode: PickOrderMode;
