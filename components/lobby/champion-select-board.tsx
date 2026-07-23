@@ -37,6 +37,8 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   ChampionPickRef,
+  ChampionSelectTurnSnapshot,
+  DraftModifiers,
   Lobby,
   LoLRole,
   PlayerAssignment,
@@ -46,6 +48,69 @@ interface ChampionSelectBoardProps {
   lobby: Lobby;
   currentUid: string;
   isAdmin: boolean;
+}
+
+function extraBanCountForTeam(
+  team: 1 | 2,
+  modifiers: DraftModifiers | null | undefined
+): number {
+  if (!modifiers?.extraBans) return 0;
+  const enemyTeam = modifiers.adrianTeam === 1 ? 2 : 1;
+  return team === enemyTeam ? modifiers.extraBans : 0;
+}
+
+function TeamBanColumn({
+  team,
+  bans,
+  extraCount,
+  turn,
+  hoverChampion,
+  hoverBanNone,
+  align,
+}: {
+  team: 1 | 2;
+  bans: (ChampionPickRef | null)[];
+  extraCount: number;
+  turn: ChampionSelectTurnSnapshot | null;
+  hoverChampion: ChampionCatalogEntry | null;
+  hoverBanNone: boolean;
+  align: "start" | "end";
+}) {
+  const extraBans = bans.slice(0, extraCount);
+  const regularBans = bans.slice(extraCount);
+  const justify = align === "start" ? "justify-start" : "justify-end";
+
+  const slotProps = (i: number, size: "sm" | "md") => {
+    const isActive =
+      !!turn && turn.kind === "ban" && turn.team === team && turn.banSlot === i;
+    return {
+      value: bans[i] ?? null,
+      size,
+      active: isActive,
+      hover: isActive ? hoverChampion : null,
+      hoverNone: hoverBanNone && isActive,
+    };
+  };
+
+  return (
+    <div className={cn("flex flex-col gap-1", align === "start" ? "items-start" : "items-end")}>
+      {extraBans.length > 0 && (
+        <div className={cn("flex gap-1", justify)}>
+          {extraBans.map((_, i) => (
+            <BanSlot key={`b${team}-extra-${i}`} {...slotProps(i, "sm")} />
+          ))}
+        </div>
+      )}
+      <div className={cn("flex gap-1.5", justify)}>
+        {regularBans.map((_, i) => {
+          const slot = i + extraCount;
+          return (
+            <BanSlot key={`b${team}-${slot}`} {...slotProps(slot, "md")} />
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function useExpiresInSeconds(expiresAtMs: number | null): number {
@@ -73,11 +138,13 @@ function BanSlot({
   active,
   hover,
   hoverNone,
+  size = "md",
 }: {
   value: ChampionPickRef | null;
   active?: boolean;
   hover?: ChampionCatalogEntry | null;
   hoverNone?: boolean;
+  size?: "sm" | "md";
 }) {
   const showHover = !value && !!hover;
   const showNoneHover = !value && !!hoverNone;
@@ -85,7 +152,8 @@ function BanSlot({
   return (
     <div
       className={cn(
-        "flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border bg-slate-950/60",
+        "flex items-center justify-center overflow-hidden rounded-md border bg-slate-950/60",
+        size === "sm" ? "h-9 w-9" : "h-12 w-12",
         active ? "border-amber-400/70 ring-1 ring-amber-400/40" : "border-slate-700",
         value && "none" in value && value.none && "opacity-50"
       )}
@@ -659,59 +727,25 @@ export function ChampionSelectBoard({
         </CardHeader>
 
         <CardContent className="space-y-4 pt-4">
-          <div className="grid grid-cols-2 items-center gap-3">
-            <div className="flex justify-start gap-1.5">
-              {state.bans.team1.map((ban, i) => (
-                <BanSlot
-                  key={`b1-${i}`}
-                  value={ban}
-                  active={
-                    !!turn &&
-                    turn.kind === "ban" &&
-                    turn.team === 1 &&
-                    turn.banSlot === i
-                  }
-                  hover={
-                    turn?.kind === "ban" &&
-                    turn.team === 1 &&
-                    turn.banSlot === i
-                      ? hoverChampion
-                      : null
-                  }
-                  hoverNone={
-                    !!hoverBanNone &&
-                    turn?.team === 1 &&
-                    turn.banSlot === i
-                  }
-                />
-              ))}
-            </div>
-            <div className="flex justify-end gap-1.5">
-              {state.bans.team2.map((ban, i) => (
-                <BanSlot
-                  key={`b2-${i}`}
-                  value={ban}
-                  active={
-                    !!turn &&
-                    turn.kind === "ban" &&
-                    turn.team === 2 &&
-                    turn.banSlot === i
-                  }
-                  hover={
-                    turn?.kind === "ban" &&
-                    turn.team === 2 &&
-                    turn.banSlot === i
-                      ? hoverChampion
-                      : null
-                  }
-                  hoverNone={
-                    !!hoverBanNone &&
-                    turn?.team === 2 &&
-                    turn.banSlot === i
-                  }
-                />
-              ))}
-            </div>
+          <div className="grid grid-cols-2 items-start gap-3">
+            <TeamBanColumn
+              team={1}
+              bans={state.bans.team1}
+              extraCount={extraBanCountForTeam(1, state.modifiers)}
+              turn={turn}
+              hoverChampion={hoverChampion}
+              hoverBanNone={!!hoverBanNone}
+              align="start"
+            />
+            <TeamBanColumn
+              team={2}
+              bans={state.bans.team2}
+              extraCount={extraBanCountForTeam(2, state.modifiers)}
+              turn={turn}
+              hoverChampion={hoverChampion}
+              hoverBanNone={!!hoverBanNone}
+              align="end"
+            />
           </div>
 
           <div className="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
