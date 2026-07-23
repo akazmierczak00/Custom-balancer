@@ -84,6 +84,7 @@ export type LobbyStatus =
   | "weakness_reveal"
   | "weakness_pick"
   | "final"
+  | "champion_select"
   | "playing"
   | "post_game"
   | "session_summary"
@@ -108,7 +109,7 @@ export interface TeamProposal {
 }
 
 export type LineupVoteChoice = "accept" | "reshuffle";
-export type ProposalVoteChoice = "A" | "B";
+export type ProposalVoteChoice = "A" | "B" | "C";
 
 /** Dwóch graczy zablokowanych na tej samej linii przeciwko sobie. */
 export interface FeaturedMatchup {
@@ -198,6 +199,7 @@ export interface Lobby {
   team2: PlayerAssignment[];
   proposalA: TeamProposal | null;
   proposalB: TeamProposal | null;
+  proposalC: TeamProposal | null;
   votes: VoteState;
   reshuffleBonusGranted: boolean;
   weaknesses: LobbyWeaknesses;

@@ -26,5 +26,10 @@ export function getLobbyUserUids(lobby: Lobby): string[] {
     addTeamPlayers(uids, lobby.proposalB.team2);
   }
 
+  if (lobby.proposalC) {
+    addTeamPlayers(uids, lobby.proposalC.team1);
+    addTeamPlayers(uids, lobby.proposalC.team2);
+  }
+
   return [...uids];
 }

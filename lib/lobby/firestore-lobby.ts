@@ -85,6 +85,7 @@ export function normalizeLobby(data: Lobby): Lobby {
     team2: data.team2?.map(normalizePlayerAssignment) ?? [],
     proposalA: data.proposalA ? normalizeTeamProposal(data.proposalA) : null,
     proposalB: data.proposalB ? normalizeTeamProposal(data.proposalB) : null,
+    proposalC: data.proposalC ? normalizeTeamProposal(data.proposalC) : null,
     weaknesses: data.weaknesses
       ? toFirestoreWeaknesses(data.weaknesses)
       : data.weaknesses,

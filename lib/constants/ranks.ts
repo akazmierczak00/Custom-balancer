@@ -95,3 +95,27 @@ export function compareRanks(
 export function isMasterPlusTier(rank: LoLRank | ""): boolean {
   return !!rank && MASTER_PLUS_TIERS.has(rank);
 }
+
+/** Emblemy rang w /public/ranks (PNG z przezroczystością). */
+const RANK_EMBLEM_FILES: Record<LoLRank, string> = {
+  iron: "Iron.png",
+  bronze: "Bronze.png",
+  silver: "Silver.png",
+  gold: "Gold.png",
+  platinum: "Platinum.png",
+  emerald: "Emerald.png",
+  diamond: "Diamond.png",
+  master: "Master.png",
+  grandmaster: "Grandmaster.png",
+  challenger: "Challenger.png",
+};
+
+export function getRankEmblemUrl(rank: LoLRank | ""): string | null {
+  if (!rank || !(rank in RANK_EMBLEM_FILES)) return null;
+  return `/ranks/${RANK_EMBLEM_FILES[rank as LoLRank]}`;
+}
+
+/** @deprecated Użyj getRankEmblemUrl */
+export function getRankBackgroundUrl(rank: LoLRank | ""): string | null {
+  return getRankEmblemUrl(rank);
+}

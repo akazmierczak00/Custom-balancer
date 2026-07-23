@@ -8,7 +8,8 @@ import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
 import { VoteVoterList } from "@/components/lobby/vote-voter-list";
 import { castProposalVote, castProposalVoteForTeam } from "@/lib/lobby/service";
 import { cn } from "@/lib/utils";
-import { Lobby, ProposalVoteChoice } from "@/types";
+import { Lobby, ProposalVoteChoice, TeamProposal } from "@/types";
+import { getProposalLabel } from "@/lib/constants/proposals";
 
 interface ProposalVotePanelProps {
   lobby: Lobby;
@@ -17,6 +18,48 @@ interface ProposalVotePanelProps {
   remaining: number;
   isAdmin?: boolean;
 }
+
+const PROPOSAL_META: {
+  choice: ProposalVoteChoice;
+  title: string;
+  borderActive: string;
+  borderIdle: string;
+  hover: string;
+  titleColor: string;
+  bar: string;
+  accent: string;
+}[] = [
+  {
+    choice: "A",
+    title: `Propozycja ${getProposalLabel("A")}`,
+    borderActive: "border-sky-500/50 bg-sky-950/25 ring-1 ring-sky-400/30",
+    borderIdle: "border-slate-700/80 bg-slate-800/30",
+    hover: "hover:border-sky-500/35 hover:bg-sky-950/15",
+    titleColor: "text-sky-300",
+    bar: "bg-sky-500/70",
+    accent: "text-sky-400/70",
+  },
+  {
+    choice: "B",
+    title: `Propozycja ${getProposalLabel("B")}`,
+    borderActive: "border-teal-500/50 bg-teal-950/25 ring-1 ring-teal-400/30",
+    borderIdle: "border-slate-700/80 bg-slate-800/30",
+    hover: "hover:border-teal-500/35 hover:bg-teal-950/15",
+    titleColor: "text-teal-300",
+    bar: "bg-teal-500/70",
+    accent: "text-teal-400/70",
+  },
+  {
+    choice: "C",
+    title: `Propozycja ${getProposalLabel("C")}`,
+    borderActive: "border-violet-500/50 bg-violet-950/25 ring-1 ring-violet-400/30",
+    borderIdle: "border-slate-700/80 bg-slate-800/30",
+    hover: "hover:border-violet-500/35 hover:bg-violet-950/15",
+    titleColor: "text-violet-300",
+    bar: "bg-violet-500/70",
+    accent: "text-violet-400/70",
+  },
+];
 
 export function ProposalVotePanel({
   lobby,
@@ -29,11 +72,21 @@ export function ProposalVotePanel({
   const votes = lobby.votes.proposals;
   const countA = Object.values(votes).filter((v) => v === "A").length;
   const countB = Object.values(votes).filter((v) => v === "B").length;
+  const countC = Object.values(votes).filter((v) => v === "C").length;
+  const counts: Record<ProposalVoteChoice, number> = {
+    A: countA,
+    B: countB,
+    C: countC,
+  };
   const votedCount = lobby.slots.filter((uid) => uid && votes[uid]).length;
   const myVote = votes[currentUid];
   const totalVotes = Math.max(votedCount, 1);
-  const shareA = (countA / totalVotes) * 100;
-  const shareB = (countB / totalVotes) * 100;
+
+  const proposals: Record<ProposalVoteChoice, TeamProposal | null> = {
+    A: lobby.proposalA,
+    B: lobby.proposalB,
+    C: lobby.proposalC ?? null,
+  };
 
   const nickByUid = useMemo(() => {
     const map = new Map<string, string>();
@@ -44,6 +97,8 @@ export function ProposalVotePanel({
       ...(lobby.proposalA?.team2 ?? []),
       ...(lobby.proposalB?.team1 ?? []),
       ...(lobby.proposalB?.team2 ?? []),
+      ...(lobby.proposalC?.team1 ?? []),
+      ...(lobby.proposalC?.team2 ?? []),
     ];
     for (const player of players) {
       map.set(player.uid, player.nick);
@@ -56,7 +111,14 @@ export function ProposalVotePanel({
       }
     }
     return map;
-  }, [lobby.team1, lobby.team2, lobby.proposalA, lobby.proposalB, lobbyUsers]);
+  }, [
+    lobby.team1,
+    lobby.team2,
+    lobby.proposalA,
+    lobby.proposalB,
+    lobby.proposalC,
+    lobbyUsers,
+  ]);
 
   const votersFor = (choice: ProposalVoteChoice) =>
     Object.entries(votes)
@@ -64,10 +126,7 @@ export function ProposalVotePanel({
       .map(([uid]) => nickByUid.get(uid) ?? uid.slice(0, 6))
       .sort((a, b) => a.localeCompare(b, "pl"));
 
-  const votersA = votersFor("A");
-  const votersB = votersFor("B");
-
-  const vote = async (choice: "A" | "B") => {
+  const vote = async (choice: ProposalVoteChoice) => {
     try {
       await castProposalVote(lobby.id, currentUid, choice);
     } catch (e) {
@@ -75,7 +134,7 @@ export function ProposalVotePanel({
     }
   };
 
-  const voteForTeam = async (choice: "A" | "B") => {
+  const voteForTeam = async (choice: ProposalVoteChoice) => {
     try {
       await castProposalVoteForTeam(lobby.id, choice);
     } catch (e) {
@@ -94,7 +153,7 @@ export function ProposalVotePanel({
             ? "Głosowanie zamknięte — trwa rozstrzygnięcie"
             : myVote
               ? "Możesz jeszcze zmienić głos, dopóki nie zagłosują wszyscy"
-              : "Porównaj obie propozycje i oddaj głos na A albo B"}
+              : "Porównaj propozycje i oddaj głos na Ł, O albo Ś"}
         </p>
       </CardHeader>
 
@@ -110,120 +169,87 @@ export function ProposalVotePanel({
           </div>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
-          <button
-            type="button"
-            disabled={locked || myVote === "A"}
-            onClick={() => void vote("A")}
-            className={cn(
-              "flex min-w-0 flex-col space-y-4 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4",
-              myVote === "A"
-                ? "border-sky-500/50 bg-sky-950/25 ring-1 ring-sky-400/30"
-                : "border-slate-700/80 bg-slate-800/30",
-              !locked &&
-                myVote !== "A" &&
-                "hover:border-sky-500/35 hover:bg-sky-950/15",
-              locked && myVote !== "A" && "opacity-60"
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-sky-300">Propozycja A</p>
-                <p className="mt-0.5 text-xs text-slate-400">Pierwszy wariant składów</p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold tabular-nums text-slate-100">{countA}</p>
-                {myVote === "A" && (
-                  <p className="mt-1 text-[11px] font-medium text-sky-400">Twój głos</p>
+        <div className="grid gap-5 xl:grid-cols-3 xl:gap-4">
+          {PROPOSAL_META.map((meta) => {
+            const proposal = proposals[meta.choice];
+            if (!proposal) return null;
+            const count = counts[meta.choice];
+            const share = (count / totalVotes) * 100;
+            const selected = myVote === meta.choice;
+
+            return (
+              <button
+                key={meta.choice}
+                type="button"
+                disabled={locked || selected}
+                onClick={() => void vote(meta.choice)}
+                className={cn(
+                  "flex min-w-0 flex-col space-y-3 rounded-xl border p-4 text-left transition-all",
+                  selected ? meta.borderActive : meta.borderIdle,
+                  !locked && !selected && meta.hover,
+                  locked && !selected && "opacity-60"
                 )}
-              </div>
-            </div>
-
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-900/80">
-              <div
-                className="h-full rounded-full bg-sky-500/70 transition-all duration-500"
-                style={{ width: `${shareA}%` }}
-              />
-            </div>
-
-            {lobby.proposalA && (
-              <div
-                className="pointer-events-none"
-                onClick={(event) => event.stopPropagation()}
               >
-                <TeamOverview
-                  lobby={{
-                    ...lobby,
-                    team1: lobby.proposalA.team1,
-                    team2: lobby.proposalA.team2,
-                  }}
-                  compact
-                  currentUid={currentUid}
-                  showRolePriorities={isAdmin}
-                  showTeamPoints={isAdmin}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={cn("text-base font-semibold", meta.titleColor)}>
+                      {meta.title}
+                    </p>
+                  </div>
+                  <div className="shrink-0 rounded-lg border border-slate-600/60 bg-slate-950/50 px-2.5 py-1.5 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      Głosy
+                    </p>
+                    <p className="text-2xl font-bold tabular-nums leading-none text-slate-50">
+                      {count}
+                    </p>
+                    {selected && (
+                      <p
+                        className={cn(
+                          "mt-1 text-[10px] font-medium",
+                          meta.titleColor
+                        )}
+                      >
+                        Twój
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-900/80">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      meta.bar
+                    )}
+                    style={{ width: `${share}%` }}
+                  />
+                </div>
+
+                <div
+                  className="pointer-events-none"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <TeamOverview
+                    lobby={{
+                      ...lobby,
+                      team1: proposal.team1,
+                      team2: proposal.team2,
+                    }}
+                    dense
+                    currentUid={currentUid}
+                    showRolePriorities={false}
+                    showTeamPoints={isAdmin}
+                  />
+                </div>
+
+                <VoteVoterList
+                  names={votersFor(meta.choice)}
+                  accentClassName={meta.accent}
                 />
-              </div>
-            )}
-
-            <VoteVoterList names={votersA} accentClassName="text-sky-400/70" />
-          </button>
-
-          <button
-            type="button"
-            disabled={locked || myVote === "B"}
-            onClick={() => void vote("B")}
-            className={cn(
-              "flex min-w-0 flex-col space-y-4 overflow-hidden rounded-xl border p-3 text-left transition-all sm:p-4",
-              myVote === "B"
-                ? "border-teal-500/50 bg-teal-950/25 ring-1 ring-teal-400/30"
-                : "border-slate-700/80 bg-slate-800/30",
-              !locked &&
-                myVote !== "B" &&
-                "hover:border-teal-500/35 hover:bg-teal-950/15",
-              locked && myVote !== "B" && "opacity-60"
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-teal-300">Propozycja B</p>
-                <p className="mt-0.5 text-xs text-slate-400">Drugi wariant składów</p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold tabular-nums text-slate-100">{countB}</p>
-                {myVote === "B" && (
-                  <p className="mt-1 text-[11px] font-medium text-teal-400">Twój głos</p>
-                )}
-              </div>
-            </div>
-
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-900/80">
-              <div
-                className="h-full rounded-full bg-teal-500/70 transition-all duration-500"
-                style={{ width: `${shareB}%` }}
-              />
-            </div>
-
-            {lobby.proposalB && (
-              <div
-                className="pointer-events-none"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <TeamOverview
-                  lobby={{
-                    ...lobby,
-                    team1: lobby.proposalB.team1,
-                    team2: lobby.proposalB.team2,
-                  }}
-                  compact
-                  currentUid={currentUid}
-                  showRolePriorities={isAdmin}
-                  showTeamPoints={isAdmin}
-                />
-              </div>
-            )}
-
-            <VoteVoterList names={votersB} accentClassName="text-teal-400/70" />
-          </button>
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -251,11 +277,26 @@ export function ProposalVotePanel({
             <p className="mr-1 w-full text-center text-[11px] uppercase tracking-wide text-slate-500 sm:w-auto sm:text-left">
               Admin
             </p>
-            <Button variant="outline" size="sm" onClick={() => void voteForTeam("A")}>
-              Team: A
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void voteForTeam("A")}
+            >
+              Team: {getProposalLabel("A")}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => void voteForTeam("B")}>
-              Team: B
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void voteForTeam("B")}
+            >
+              Team: {getProposalLabel("B")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void voteForTeam("C")}
+            >
+              Team: {getProposalLabel("C")}
             </Button>
           </div>
         )}

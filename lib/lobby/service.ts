@@ -18,6 +18,7 @@ import {
   buildFullProposal,
   generateDistinctProposals,
   proposalsAreEqual,
+  type BuildProposalOptions,
 } from "@/lib/algorithms/balanceTeams";
 import {
   getWeaknessPointsBase,
@@ -53,6 +54,7 @@ import {
 } from "@/lib/lobby/test-bots";
 import {
   BalanceMode,
+  FeaturedMatchup,
   Lobby,
   LobbyPlayer,
   LobbyStatus,
@@ -60,6 +62,7 @@ import {
   LoLRole,
   MatchResult,
   PlayerAssignment,
+  ProposalVoteChoice,
   SelectedWeakness,
   TeamProposal,
   UserProfile,
@@ -77,8 +80,51 @@ const REVEAL_SECONDS = 5;
 const CONFIRM_SECONDS = 20;
 const VOTE_LOCK_SECONDS = 10;
 
-function featuredOptions(lobby: Lobby) {
-  return { featuredMatchup: lobby.featuredMatchup ?? null };
+/** Seria przegranych Adriana (createdBy) od końca sesji — wygrana resetuje. */
+export function countAdrianConsecutiveLosses(lobby: Lobby): number {
+  const uid = lobby.createdBy;
+  const history = lobby.roundHistory ?? [];
+  let streak = 0;
+
+  for (let i = history.length - 1; i >= 0; i--) {
+    const round = history[i]!;
+    const onTeam1 = round.team1.some((p) => p.uid === uid);
+    const onTeam2 = round.team2.some((p) => p.uid === uid);
+    if (!onTeam1 && !onTeam2) break;
+
+    const adrianTeam: 1 | 2 = onTeam1 ? 1 : 2;
+    if (round.winnerTeam === adrianTeam) break;
+    streak++;
+  }
+
+  return streak;
+}
+
+/**
+ * Opcje pierwszego losowania classic (nie reshuffle):
+ * featured + Adrian dostaje rolę z odblokowanych priorytetów jako drugi w kolejce.
+ */
+function classicFirstDrawOptions(
+  lobby: Lobby,
+  featuredMatchup?: FeaturedMatchup | null,
+  balanceMode?: BalanceMode
+): BuildProposalOptions {
+  const options: BuildProposalOptions = {
+    featuredMatchup:
+      featuredMatchup !== undefined
+        ? featuredMatchup
+        : (lobby.featuredMatchup ?? null),
+  };
+
+  const mode = normalizeBalanceMode(balanceMode ?? lobby.balanceMode);
+  if (mode === "classic") {
+    options.classicPriorityAssign = {
+      uid: lobby.createdBy,
+      unlockedGroups: 1 + countAdrianConsecutiveLosses(lobby),
+    };
+  }
+
+  return options;
 }
 
 function emptySlots(): (string | null)[] {
@@ -172,6 +218,7 @@ export async function createLobby(
     team2: [],
     proposalA: null,
     proposalB: null,
+    proposalC: null,
     votes: defaultVotes(),
     reshuffleBonusGranted: false,
     weaknesses: defaultWeaknessesState(),
@@ -635,7 +682,7 @@ export async function draftTeams(lobbyId: string) {
   const proposal = buildFullProposal(
     players,
     lobby.balanceMode,
-    featuredOptions(lobby)
+    classicFirstDrawOptions(lobby)
   );
 
   await updateDoc(lobbyRef, {
@@ -773,7 +820,7 @@ export async function resolveLineupVote(lobbyId: string) {
   if (reshuffleCount >= 6) {
     const uids = lobby.slots.filter(Boolean) as string[];
     const players = await fetchLobbyPlayers(uids);
-    const { proposalA, proposalB } = generateDistinctProposals(
+    const { proposalA, proposalB, proposalC } = generateDistinctProposals(
       players,
       lobby.balanceMode,
       {
@@ -786,6 +833,7 @@ export async function resolveLineupVote(lobbyId: string) {
       status: "reshuffle_reveal",
       proposalA: toFirestoreProposal(proposalA),
       proposalB: toFirestoreProposal(proposalB),
+      proposalC: toFirestoreProposal(proposalC),
       revealRoleIndex: 0,
       votes: defaultVotes(),
       reshuffleBonusGranted: adrianVotedReshuffle,
@@ -834,7 +882,7 @@ export async function advanceReshuffleReveal(lobbyId: string) {
 export async function castProposalVote(
   lobbyId: string,
   uid: string,
-  choice: "A" | "B"
+  choice: ProposalVoteChoice
 ) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   await runTransaction(getFirebaseDb(), async (tx) => {
@@ -870,7 +918,10 @@ export async function castProposalVote(
   });
 }
 
-export async function castProposalVoteForTeam(lobbyId: string, choice: "A" | "B") {
+export async function castProposalVoteForTeam(
+  lobbyId: string,
+  choice: ProposalVoteChoice
+) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   await runTransaction(getFirebaseDb(), async (tx) => {
     const snap = await tx.get(lobbyRef);
@@ -913,6 +964,7 @@ function applyProposal(lobby: Lobby, proposal: TeamProposal) {
     team2: safe.team2,
     proposalA: null,
     proposalB: null,
+    proposalC: null,
   };
 }
 
@@ -925,15 +977,26 @@ export async function resolveProposalVote(lobbyId: string) {
   const votes = Object.values(lobby.votes.proposals);
   const countA = votes.filter((v) => v === "A").length;
   const countB = votes.filter((v) => v === "B").length;
+  const countC = votes.filter((v) => v === "C").length;
 
-  let winningProposal: TeamProposal;
-  if (countA === 5 && countB === 5) {
-    winningProposal = Math.random() < 0.5 ? lobby.proposalA! : lobby.proposalB!;
-  } else if (countA >= 6) {
-    winningProposal = lobby.proposalA!;
-  } else {
-    winningProposal = lobby.proposalB!;
-  }
+  const byChoice: Record<ProposalVoteChoice, TeamProposal | null> = {
+    A: lobby.proposalA,
+    B: lobby.proposalB,
+    C: lobby.proposalC ?? null,
+  };
+  const counts: Record<ProposalVoteChoice, number> = {
+    A: countA,
+    B: countB,
+    C: countC,
+  };
+  const max = Math.max(countA, countB, countC);
+  const tied = (["A", "B", "C"] as ProposalVoteChoice[]).filter(
+    (choice) => counts[choice] === max && byChoice[choice]
+  );
+  const winnerKey =
+    tied[Math.floor(Math.random() * Math.max(tied.length, 1))] ??
+    (["A", "B", "C"] as ProposalVoteChoice[]).find((c) => byChoice[c])!;
+  const winningProposal = byChoice[winnerKey]!;
 
   await updateDoc(lobbyRef, {
     status: "overview",
@@ -949,6 +1012,18 @@ export async function startWeaknessReveal(lobbyId: string) {
   const lobbySnap = await getDoc(lobbyRef);
   if (!lobbySnap.exists()) throw new Error("Lobby nie istnieje");
   const lobby = lobbySnap.data() as Lobby;
+
+  const allowedStatuses: LobbyStatus[] = [
+    "overview",
+    "weakness_reveal",
+    "weakness_pick",
+  ];
+  if (!allowedStatuses.includes(lobby.status)) {
+    throw new Error("Nie można teraz wylosować osłabień");
+  }
+  if (lobby.weaknesses?.confirmed) {
+    throw new Error("Osłabienia są już zatwierdzone");
+  }
 
   const weaknessesSnap = await getDocs(collection(getFirebaseDb(), "weaknesses"));
   const weaknesses = weaknessesSnap.docs.map(
@@ -967,6 +1042,7 @@ export async function startWeaknessReveal(lobbyId: string) {
     team2: toFirestoreTeam(lobby.team2),
     proposalA: lobby.proposalA ? toFirestoreProposal(lobby.proposalA) : null,
     proposalB: lobby.proposalB ? toFirestoreProposal(lobby.proposalB) : null,
+    proposalC: lobby.proposalC ? toFirestoreProposal(lobby.proposalC) : null,
     weaknesses: toFirestoreWeaknesses({
       ...defaultWeaknessesState(),
       drawn,
@@ -1189,6 +1265,27 @@ export async function startPlaying(lobbyId: string) {
   });
 }
 
+/** Admin: przejście do pustej planszy champion select. */
+export async function startChampionSelect(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+  if (!lobby.weaknesses?.confirmed) {
+    throw new Error("Najpierw zatwierdź osłabienia");
+  }
+  if (lobby.status !== "final" && lobby.status !== "champion_select") {
+    throw new Error("Champion select dostępny po zatwierdzeniu osłabień");
+  }
+
+  await updateDoc(lobbyRef, {
+    status: "champion_select",
+    phaseTimerEndsAt: null,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function setWinner(lobbyId: string, team: 1 | 2) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
 
@@ -1300,7 +1397,10 @@ export async function updateRoundMedia(
   });
 }
 
-export async function startNextRound(lobbyId: string) {
+export async function startNextRound(
+  lobbyId: string,
+  options?: { keepFeaturedMatchup?: boolean }
+) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   const snap = await getDoc(lobbyRef);
   if (!snap.exists()) throw new Error("Lobby nie istnieje");
@@ -1311,24 +1411,22 @@ export async function startNextRound(lobbyId: string) {
     throw new Error("Lobby musi mieć 10 graczy, aby zacząć kolejną rundę");
   }
 
+  const keepFeatured = options?.keepFeaturedMatchup !== false;
+  const drawOptions = classicFirstDrawOptions(
+    lobby,
+    keepFeatured ? lobby.featuredMatchup ?? null : null
+  );
+
   const players = await fetchLobbyPlayers(uids);
   const previous: TeamProposal = {
     team1: lobby.team1,
     team2: lobby.team2,
   };
 
-  let proposal = buildFullProposal(
-    players,
-    lobby.balanceMode,
-    featuredOptions(lobby)
-  );
+  let proposal = buildFullProposal(players, lobby.balanceMode, drawOptions);
   for (let attempt = 0; attempt < 50; attempt++) {
     if (!proposalsAreEqual(proposal, previous)) break;
-    proposal = buildFullProposal(
-      players,
-      lobby.balanceMode,
-      featuredOptions(lobby)
-    );
+    proposal = buildFullProposal(players, lobby.balanceMode, drawOptions);
   }
 
   await updateDoc(lobbyRef, {
@@ -1339,9 +1437,11 @@ export async function startNextRound(lobbyId: string) {
     votes: defaultVotes(),
     proposalA: null,
     proposalB: null,
+    proposalC: null,
     weaknesses: defaultWeaknessesState(),
     winnerTeam: null,
     reshuffleBonusGranted: false,
+    ...(keepFeatured ? {} : { featuredMatchup: null }),
     updatedAt: serverTimestamp(),
   });
 }
@@ -1374,11 +1474,16 @@ export async function adminRedrawOverviewTeams(
     team1: lobby.team1,
     team2: lobby.team2,
   };
+  const drawOptions = classicFirstDrawOptions(
+    lobby,
+    lobby.featuredMatchup ?? null,
+    mode
+  );
 
-  let proposal = buildFullProposal(players, mode, featuredOptions(lobby));
+  let proposal = buildFullProposal(players, mode, drawOptions);
   for (let attempt = 0; attempt < 50; attempt++) {
     if (!proposalsAreEqual(proposal, previous)) break;
-    proposal = buildFullProposal(players, mode, featuredOptions(lobby));
+    proposal = buildFullProposal(players, mode, drawOptions);
   }
 
   await updateDoc(lobbyRef, {
@@ -1390,6 +1495,7 @@ export async function adminRedrawOverviewTeams(
     votes: defaultVotes(),
     proposalA: null,
     proposalB: null,
+    proposalC: null,
     updatedAt: serverTimestamp(),
   });
 }
@@ -1538,6 +1644,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       updates.votes = defaultVotes();
       updates.proposalA = null;
       updates.proposalB = null;
+      updates.proposalC = null;
       break;
     case "voting_lineup":
       updates.votes = defaultVotes();
@@ -1546,10 +1653,10 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
     case "reshuffle_reveal": {
       const uids = lobby.slots.filter(Boolean) as string[];
       if (uids.length < LOBBY_SIZE) {
-        throw new Error("Lobby musi być pełne, aby wygenerować propozycje A/B");
+        throw new Error("Lobby musi być pełne, aby wygenerować propozycje Ł/O/Ś");
       }
       const players = await fetchLobbyPlayers(uids);
-      const { proposalA, proposalB } = generateDistinctProposals(
+      const { proposalA, proposalB, proposalC } = generateDistinctProposals(
         players,
         lobby.balanceMode,
         {
@@ -1562,6 +1669,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
       );
       updates.proposalA = toFirestoreProposal(proposalA);
       updates.proposalB = toFirestoreProposal(proposalB);
+      updates.proposalC = toFirestoreProposal(proposalC);
       updates.revealRoleIndex = 0;
       updates.votes = defaultVotes();
       updates.phaseTimerEndsAt = Timestamp.fromMillis(
@@ -1572,10 +1680,11 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
     case "voting_proposals": {
       let proposalA = lobby.proposalA;
       let proposalB = lobby.proposalB;
-      if (!proposalA || !proposalB) {
+      let proposalC = lobby.proposalC ?? null;
+      if (!proposalA || !proposalB || !proposalC) {
         const uids = lobby.slots.filter(Boolean) as string[];
         if (uids.length < LOBBY_SIZE) {
-          throw new Error("Brak propozycji A/B — uzupełnij lobby");
+          throw new Error("Brak propozycji Ł/O/Ś — uzupełnij lobby");
         }
         const players = await fetchLobbyPlayers(uids);
         const proposals = generateDistinctProposals(players, lobby.balanceMode, {
@@ -1587,9 +1696,11 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
         });
         proposalA = proposals.proposalA;
         proposalB = proposals.proposalB;
+        proposalC = proposals.proposalC;
       }
       updates.proposalA = toFirestoreProposal(proposalA);
       updates.proposalB = toFirestoreProposal(proposalB);
+      updates.proposalC = toFirestoreProposal(proposalC);
       updates.votes = defaultVotes();
       updates.phaseTimerEndsAt = null;
       break;

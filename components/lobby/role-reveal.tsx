@@ -1,6 +1,7 @@
 "use client";
 
 import { getRoleLabel, REVEAL_ROLE_ORDER } from "@/lib/constants/roles";
+import { getProposalLabel } from "@/lib/constants/proposals";
 import { cn } from "@/lib/utils";
 import { Lobby, LoLRole, PlayerAssignment, TeamProposal } from "@/types";
 import { PlayerBanner } from "@/components/profile/player-banner";
@@ -17,9 +18,9 @@ interface RoleRevealRowProps {
   role: LoLRole;
   team1: PlayerAssignment[];
   team2: PlayerAssignment[];
-  highlighted?: boolean;
   featured?: boolean;
-  compact?: boolean;
+  /** Pełny banner (zwykły reveal). */
+  dense?: boolean;
   currentUid?: string;
   showRolePriorities?: boolean;
 }
@@ -28,9 +29,8 @@ function RoleRevealRow({
   role,
   team1,
   team2,
-  highlighted,
   featured,
-  compact,
+  dense = false,
   currentUid,
   showRolePriorities = false,
 }: RoleRevealRowProps) {
@@ -41,48 +41,38 @@ function RoleRevealRow({
     <div
       className={cn(
         "relative grid min-w-0 items-stretch animate-role-reveal-in",
-        compact
-          ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
+        dense
+          ? "grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] gap-1.5"
           : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4",
-        highlighted && !featured && "rounded-lg ring-2 ring-indigo-400/40",
         featured &&
-          "rounded-xl bg-amber-500/10 ring-2 ring-amber-400/70 shadow-[0_0_24px_-8px_rgba(251,191,36,0.55)]"
+          "rounded-lg bg-amber-500/10 ring-2 ring-amber-400/70 shadow-[0_0_20px_-8px_rgba(251,191,36,0.5)]",
+        featured && dense && "px-0.5 py-0.5"
       )}
     >
-      {featured && (
-        <div
-          className={cn(
-            "pointer-events-none absolute left-1/2 z-10 -translate-x-1/2",
-            compact ? "-top-2" : "-top-2.5"
-          )}
-        >
-          <span
-            className={cn(
-              "rounded-full border border-amber-400/50 bg-amber-950/90 font-semibold uppercase tracking-wide text-amber-200",
-              compact ? "px-1.5 py-0.5 text-[8px]" : "px-2.5 py-0.5 text-[10px]"
-            )}
-          >
-            Featured Matchup
+      {featured && !dense && (
+        <div className="pointer-events-none absolute left-1/2 z-10 -top-2 -translate-x-1/2">
+          <span className="rounded-full border border-amber-400/50 bg-amber-950/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+            Featured
           </span>
         </div>
       )}
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0">
         <PlayerBanner
           player={p1}
           role={role}
           isCurrentUser={p1?.uid === currentUid}
-          mirrored
-          compact={compact}
-          showRolePriorities={showRolePriorities}
-          className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
+          mirrored={!dense}
+          dense={dense}
+          showRolePriorities={showRolePriorities && !dense}
+          className="h-full"
         />
       </div>
       <div className="flex flex-col items-center justify-center gap-0.5">
         <span
           className={cn(
             "text-center font-semibold",
-            featured ? "text-amber-200" : "text-slate-300",
-            compact ? "text-[10px] leading-tight" : "text-sm"
+            featured ? "text-amber-200" : dense ? "text-slate-200" : "text-slate-300",
+            dense ? "text-[11px] leading-tight" : "text-sm"
           )}
         >
           {getRoleLabel(role)}
@@ -91,21 +81,21 @@ function RoleRevealRow({
           <span
             className={cn(
               "font-bold uppercase tracking-wider text-amber-400/90",
-              compact ? "text-[8px]" : "text-[10px]"
+              dense ? "text-[8px]" : "text-[10px]"
             )}
           >
             vs
           </span>
         )}
       </div>
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0">
         <PlayerBanner
           player={p2}
           role={role}
           isCurrentUser={p2?.uid === currentUid}
-          compact={compact}
-          showRolePriorities={showRolePriorities}
-          className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
+          dense={dense}
+          showRolePriorities={showRolePriorities && !dense}
+          className="h-full"
         />
       </div>
     </div>
@@ -136,11 +126,8 @@ interface ProposalRevealColumnProps {
   team1: PlayerAssignment[];
   team2: PlayerAssignment[];
   revealedRoles: LoLRole[];
-  currentRole: LoLRole;
   lobby: Lobby;
-  compact?: boolean;
   currentUid?: string;
-  showRolePriorities?: boolean;
 }
 
 function ProposalRevealColumn({
@@ -150,33 +137,29 @@ function ProposalRevealColumn({
   team1,
   team2,
   revealedRoles,
-  currentRole,
   lobby,
-  compact = false,
   currentUid,
-  showRolePriorities = false,
 }: ProposalRevealColumnProps) {
   return (
     <div
       className={cn(
-        "min-w-0 space-y-3 overflow-hidden rounded-xl border p-3",
-        compact && "p-2",
+        "min-w-0 space-y-2.5 rounded-xl border bg-slate-950/30 p-3 sm:p-4",
         borderClassName
       )}
     >
-      <p className={cn("text-center font-semibold", labelClassName)}>{label}</p>
-      <div className={cn("space-y-2", compact ? "pt-1" : "pt-2")}>
+      <p className={cn("text-center text-sm font-semibold sm:text-base", labelClassName)}>
+        {label}
+      </p>
+      <div className="space-y-2 pt-1">
         {revealedRoles.map((role) => (
           <RoleRevealRow
             key={role}
             role={role}
             team1={team1}
             team2={team2}
-            highlighted={role === currentRole}
             featured={isFeaturedRole(role, team1, team2, lobby)}
-            compact={compact}
+            dense
             currentUid={currentUid}
-            showRolePriorities={showRolePriorities}
           />
         ))}
       </div>
@@ -198,34 +181,46 @@ export function RoleReveal({
   if (!currentRole) return null;
 
   if (dual && lobby.proposalA && lobby.proposalB) {
+    const hasC = !!lobby.proposalC;
     return (
-      <div className="grid gap-10 md:grid-cols-2 md:gap-16">
+      <div
+        className={cn(
+          "grid gap-4",
+          hasC ? "grid-cols-1 xl:grid-cols-3" : "grid-cols-1 md:grid-cols-2 md:gap-6"
+        )}
+      >
         <ProposalRevealColumn
-          label="Propozycja A"
-          labelClassName="text-indigo-300"
-          borderClassName="border-indigo-500/30"
+          label={`Propozycja ${getProposalLabel("A")}`}
+          labelClassName="text-sky-300"
+          borderClassName="border-sky-500/40"
           team1={lobby.proposalA.team1}
           team2={lobby.proposalA.team2}
           revealedRoles={revealedRoles}
-          currentRole={currentRole}
           lobby={lobby}
-          compact
           currentUid={currentUid}
-          showRolePriorities={showRolePriorities}
         />
         <ProposalRevealColumn
-          label="Propozycja B"
-          labelClassName="text-purple-300"
-          borderClassName="border-purple-500/30"
+          label={`Propozycja ${getProposalLabel("B")}`}
+          labelClassName="text-teal-300"
+          borderClassName="border-teal-500/40"
           team1={lobby.proposalB.team1}
           team2={lobby.proposalB.team2}
           revealedRoles={revealedRoles}
-          currentRole={currentRole}
           lobby={lobby}
-          compact
           currentUid={currentUid}
-          showRolePriorities={showRolePriorities}
         />
+        {lobby.proposalC && (
+          <ProposalRevealColumn
+            label={`Propozycja ${getProposalLabel("C")}`}
+            labelClassName="text-violet-300"
+            borderClassName="border-violet-500/40"
+            team1={lobby.proposalC.team1}
+            team2={lobby.proposalC.team2}
+            revealedRoles={revealedRoles}
+            lobby={lobby}
+            currentUid={currentUid}
+          />
+        )}
       </div>
     );
   }
@@ -247,7 +242,6 @@ export function RoleReveal({
             role={role}
             team1={team1}
             team2={team2}
-            highlighted={role === currentRole}
             featured={isFeaturedRole(role, team1, team2, lobby)}
             currentUid={currentUid}
             showRolePriorities={showRolePriorities}

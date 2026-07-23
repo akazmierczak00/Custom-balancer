@@ -21,6 +21,7 @@ import {
 import { LobbyUsersProvider } from "@/components/lobby/lobby-users-context";
 import { PostGamePanel } from "@/components/lobby/post-game-panel";
 import { SessionSummaryPanel } from "@/components/lobby/session-summary-panel";
+import { ChampionSelectBoard } from "@/components/lobby/champion-select-board";
 import {
   advanceReveal,
   advanceReshuffleReveal,
@@ -36,12 +37,14 @@ import {
   enterLobbyRoom,
   exitLobbyRoom,
   countPlayersInLobbyRoom,
+  startChampionSelect,
   startLineupVoting,
   startWeaknessReveal,
 } from "@/lib/lobby/service";
 import { getWeaknessCellIndex, WEAKNESS_REVEAL_DELAY_MS } from "@/lib/algorithms/drawWeaknesses";
 import { getBalanceModeLabel } from "@/lib/constants/balance-modes";
 import { getRoleLabel } from "@/lib/constants/roles";
+import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyRoomProps {
@@ -229,6 +232,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
   const showTeamOverview =
     lobby.status !== "session_summary" &&
+    lobby.status !== "champion_select" &&
     (lobby.status === "overview" ||
     lobby.status === "voting_lineup" ||
     lobby.status === "locked_lineup" ||
@@ -241,6 +245,7 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
   const showWeaknessSection =
     lobby.status !== "session_summary" &&
+    lobby.status !== "champion_select" &&
     (lobby.status === "weakness_reveal" ||
       lobby.status === "weakness_pick" ||
       lobby.weaknesses?.confirmed) &&
@@ -249,9 +254,15 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     lobby.status === "overview" &&
     lobby.team1.length > 0 &&
     !lobby.weaknesses?.confirmed;
+  const canRedrawWeaknesses =
+    adminView &&
+    (lobby.status === "weakness_reveal" || lobby.status === "weakness_pick") &&
+    !!lobby.weaknesses &&
+    !lobby.weaknesses.confirmed;
 
   const handleStartWeaknessReveal = async () => {
     setWeaknessLoading(true);
+    weaknessRevealInFlight.current = false;
     try {
       await startWeaknessReveal(lobby.id);
     } catch (e) {
@@ -284,6 +295,19 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
       alert(e instanceof Error ? e.message : "Błąd zatwierdzenia");
     }
   };
+
+  const handleStartChampionSelect = async () => {
+    try {
+      await startChampionSelect(lobby.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Błąd przejścia do champion select");
+    }
+  };
+
+  const canStartChampionSelect =
+    adminView &&
+    lobby.status === "final" &&
+    !!lobby.weaknesses?.confirmed;
 
   const filledSlots = lobby.slots.filter(Boolean).length;
 
@@ -327,7 +351,16 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         </Button>
       </div>
     )}
-    <div className="mx-auto max-w-6xl space-y-8 p-4">
+    <div
+      className={cn(
+        "mx-auto space-y-8 p-4",
+        lobby.status === "reshuffle_reveal" ||
+          lobby.status === "voting_proposals" ||
+          lobby.status === "locked_proposals"
+          ? "max-w-7xl"
+          : "max-w-6xl"
+      )}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Lobby #{lobby.id.slice(0, 8)}</h1>
@@ -477,16 +510,27 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
 
       {showWeaknessSection && (
         <div className="space-y-4">
-          {canAdminActAsSelector && (
-            <div className="flex justify-center">
-              <Button
-                variant={adminActingAsSelector ? "default" : "outline"}
-                onClick={() => setAdminActingAsSelector((value) => !value)}
-              >
-                {adminActingAsSelector
-                  ? "Wyjdź z widoku selektora"
-                  : `Wciel się w ${selectorPlayer?.nick ?? "selektora"}`}
-              </Button>
+          {(canRedrawWeaknesses || canAdminActAsSelector) && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {canRedrawWeaknesses && (
+                <Button
+                  variant="outline"
+                  onClick={handleStartWeaknessReveal}
+                  disabled={weaknessLoading}
+                >
+                  {weaknessLoading ? "Losowanie..." : "Wylosuj nowe osłabienia"}
+                </Button>
+              )}
+              {canAdminActAsSelector && (
+                <Button
+                  variant={adminActingAsSelector ? "default" : "outline"}
+                  onClick={() => setAdminActingAsSelector((value) => !value)}
+                >
+                  {adminActingAsSelector
+                    ? "Wyjdź z widoku selektora"
+                    : `Wciel się w ${selectorPlayer?.nick ?? "selektora"}`}
+                </Button>
+              )}
             </div>
           )}
           <WeaknessGrid
@@ -508,14 +552,25 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
               </Button>
             </div>
           )}
+          {canStartChampionSelect && (
+            <div className="flex justify-center">
+              <Button onClick={handleStartChampionSelect}>
+                Przejdź do champion select
+              </Button>
+            </div>
+          )}
         </div>
       )}
+
+      {lobby.status === "champion_select" && <ChampionSelectBoard />}
 
       {lobby.status === "session_summary" && (
         <SessionSummaryPanel lobby={lobby} isAdmin={adminView} />
       )}
 
-      <PostGamePanel lobby={lobby} isAdmin={adminView} />
+      {lobby.status !== "champion_select" && (
+        <PostGamePanel lobby={lobby} isAdmin={adminView} />
+      )}
     </div>
     </LobbyUsersProvider>
   );

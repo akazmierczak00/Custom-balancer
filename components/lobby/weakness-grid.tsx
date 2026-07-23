@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChampionListCollapsible } from "@/components/lobby/champion-list-collapsible";
-import { getRevealIntensity, WEAKNESS_GRID_COLS } from "@/lib/algorithms/drawWeaknesses";
+import { getRevealIntensity, getRarityBadgeClass, getRarityLabel, WEAKNESS_GRID_COLS } from "@/lib/algorithms/drawWeaknesses";
 import { isNarrowChampionPoolWeakness } from "@/lib/champions/narrow-pool";
 import { cn } from "@/lib/utils";
 import { LobbyWeaknesses } from "@/types";
@@ -143,9 +143,6 @@ export function WeaknessGrid({
                   </span>
                 </p>
               </div>
-              <p className="pb-1 text-sm tabular-nums text-slate-400">
-                Wydano {pointsSpent}
-              </p>
             </div>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-900/80">
               <div
@@ -190,27 +187,36 @@ export function WeaknessGrid({
                       disabled={!canSelect || !cell.revealed}
                       onClick={() => void handleCellClick(rowIdx, colIdx)}
                       className={cn(
-                        "min-h-[5rem] rounded-xl border border-slate-700/70 bg-slate-800/50 p-3 text-left transition-all",
+                        "min-h-[5rem] rounded-xl p-3 text-left transition-all",
                         !cell.revealed &&
-                          "flex items-center justify-center border-dashed opacity-40",
+                          "flex items-center justify-center border border-dashed border-slate-700/70 bg-slate-800/50 opacity-40",
                         cell.revealed &&
                           !isFlashing &&
+                          !selected &&
                           getRevealIntensity(cell.rarity),
                         isFlashing &&
-                          "border-red-500/50 bg-red-950/40 ring-1 ring-red-500/40",
+                          "border border-red-500/50 bg-red-950/40 shadow-[0_0_16px_2px_rgba(239,68,68,0.35)]",
                         selected &&
                           !isFlashing &&
-                          "border-amber-500/45 bg-amber-500/10 ring-1 ring-amber-400/30",
+                          "border border-amber-400/60 bg-amber-500/10 shadow-[0_0_16px_2px_rgba(251,191,36,0.35)]",
                         canSelect &&
                           cell.revealed &&
                           !isFlashing &&
                           (selected
-                            ? "hover:border-slate-500/60 hover:bg-slate-800/70"
-                            : "hover:border-amber-500/35 hover:bg-amber-500/5")
+                            ? "hover:border-amber-300/70"
+                            : "hover:brightness-110")
                       )}
                     >
                       {cell.revealed ? (
                         <>
+                          <span
+                            className={cn(
+                              "mb-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              getRarityBadgeClass(cell.rarity)
+                            )}
+                          >
+                            {getRarityLabel(cell.rarity)}
+                          </span>
                           <p className="text-sm font-semibold leading-tight text-slate-100">
                             {cell.name}
                           </p>

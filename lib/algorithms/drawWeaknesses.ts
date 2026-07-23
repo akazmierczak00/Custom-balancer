@@ -93,9 +93,51 @@ export function getRevealDelay(_rarity?: number): number {
   return WEAKNESS_REVEAL_DELAY_MS;
 }
 
+export type WeaknessRarityTier = "common" | "rare" | "legendary";
+
+/**
+ * Wyższa wartość rarity = rzadsze osłabienie.
+ * 1–51 zwykłe, 52–70 rzadkie, 71–100 legendarne.
+ */
+export function getWeaknessRarityTier(rarity: number): WeaknessRarityTier {
+  if (rarity >= 71) return "legendary";
+  if (rarity >= 52) return "rare";
+  return "common";
+}
+
+export function getRarityLabel(rarity: number): string {
+  switch (getWeaknessRarityTier(rarity)) {
+    case "legendary":
+      return "Legendarne";
+    case "rare":
+      return "Rzadkie";
+    default:
+      return "Zwykłe";
+  }
+}
+
+/**
+ * Jednolity styl karty: ten sam kolor glow (liliowy), różna intensywność według rzadkości.
+ */
 export function getRevealIntensity(rarity: number): string {
-  if (rarity <= 10) return "ring-1 ring-yellow-500/25 shadow-sm shadow-yellow-500/10";
-  if (rarity <= 30) return "ring-1 ring-purple-500/20 shadow-sm shadow-purple-500/10";
-  if (rarity <= 60) return "ring-1 ring-blue-400/15";
-  return "";
+  const base = "border bg-slate-800/70";
+  switch (getWeaknessRarityTier(rarity)) {
+    case "legendary":
+      return `${base} border-fuchsia-400/55 shadow-[0_0_22px_4px_rgba(232,121,249,0.45)]`;
+    case "rare":
+      return `${base} border-fuchsia-400/45 shadow-[0_0_14px_2px_rgba(232,121,249,0.28)]`;
+    default:
+      return `${base} border-fuchsia-400/15 shadow-[0_0_3px_0px_rgba(232,121,249,0.02)]`;
+  }
+}
+
+export function getRarityBadgeClass(rarity: number): string {
+  switch (getWeaknessRarityTier(rarity)) {
+    case "legendary":
+      return "bg-fuchsia-500/30 text-fuchsia-100";
+    case "rare":
+      return "bg-fuchsia-500/20 text-fuchsia-200";
+    default:
+      return "bg-fuchsia-500/5 text-fuchsia-300/50";
+  }
 }

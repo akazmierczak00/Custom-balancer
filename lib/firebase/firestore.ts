@@ -59,6 +59,7 @@ export function subscribeToActiveLobbies(
       "weakness_reveal",
       "weakness_pick",
       "final",
+      "champion_select",
       "playing",
       "post_game",
     ])

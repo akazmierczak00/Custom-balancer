@@ -12,6 +12,7 @@ import {
   setWinner,
   startNextRound,
 } from "@/lib/lobby/service";
+import { getRoleLabel } from "@/lib/constants/roles";
 import { cn } from "@/lib/utils";
 import { Lobby, UserProfile } from "@/types";
 
@@ -23,6 +24,7 @@ interface PostGamePanelProps {
 export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
   const [loading, setLoading] = useState(false);
   const [kickingUid, setKickingUid] = useState<string | null>(null);
+  const [keepFeaturedMatchup, setKeepFeaturedMatchup] = useState(true);
   const lobbyUsers = useLobbyUsers();
   const [users, setUsers] = useState<Record<string, UserProfile>>({});
 
@@ -68,7 +70,11 @@ export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
   const handleStartNextRound = async () => {
     setLoading(true);
     try {
-      await startNextRound(lobby.id);
+      await startNextRound(lobby.id, {
+        keepFeaturedMatchup: lobby.featuredMatchup
+          ? keepFeaturedMatchup
+          : true,
+      });
     } catch (e) {
       alert(e instanceof Error ? e.message : "Błąd");
     } finally {
@@ -181,6 +187,36 @@ export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
             <p className="text-sm text-amber-300/90">
               Uzupełnij skład ({filled}/10), zanim zaczniesz kolejną rundę.
             </p>
+          )}
+
+          {lobby.featuredMatchup && (
+            <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-950/20 px-3 py-3">
+              <p className="text-sm text-amber-100">
+                Featured:{" "}
+                {resolvedUsers[lobby.featuredMatchup.uidA]?.nick || "…"} vs{" "}
+                {resolvedUsers[lobby.featuredMatchup.uidB]?.nick || "…"} ·{" "}
+                {getRoleLabel(lobby.featuredMatchup.role)}
+              </p>
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 accent-amber-400"
+                  checked={keepFeaturedMatchup}
+                  onChange={(e) => setKeepFeaturedMatchup(e.target.checked)}
+                  disabled={loading}
+                />
+                <span>
+                  <span className="font-medium">
+                    Utrzymaj Featured Matchup
+                  </span>
+                  <span className="mt-0.5 block text-xs text-slate-400">
+                    {keepFeaturedMatchup
+                      ? "Kolejna runda też z tym samym pojedynkiem na linii."
+                      : "Następne losowanie bez Featured — wolne role dla wszystkich."}
+                  </span>
+                </span>
+              </label>
+            </div>
           )}
 
           <div className="flex flex-wrap gap-3">

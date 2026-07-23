@@ -14,6 +14,18 @@ const ALL_ROLES: LoLRole[] = ["top", "jungle", "mid", "adc", "support"];
 
 export type BuildProposalOptions = {
   featuredMatchup?: FeaturedMatchup | null;
+  /** Nadpisanie limitu ±pkt w classic (np. szersza pula pod reshuffle A/B/C). */
+  classicMaxDeviation?: number;
+  /**
+   * Classic — tylko pierwsze losowanie (nie reshuffle):
+   * po featured przypisz temu graczowi rolę z odblokowanych grup priorytetu,
+   * zanim dobierzesz resztę drużyny.
+   */
+  classicPriorityAssign?: {
+    uid: string;
+    /** Ile grup priorytetu jest odblokowanych (1 = tylko najwyższy priorytet). */
+    unlockedGroups: number;
+  } | null;
 };
 
 function normalizeFeaturedMatchup(
@@ -82,7 +94,7 @@ function teamPointsSum(team: LobbyPlayer[]): number {
 /** Klasyczny podział — bez zmian względem poprzedniej wersji. */
 export function generateBalancedTeams(
   players: LobbyPlayer[],
-  maxDeviation = 4,
+  maxDeviation = 10,
   attempts = 200,
   featured: FeaturedMatchup | null = null
 ): { team1: LobbyPlayer[]; team2: LobbyPlayer[] } {
@@ -152,7 +164,7 @@ export function generateBalancedTeams(
   }
 
   candidates.sort((a, b) => a.score - b.score);
-  const topN = candidates.slice(0, Math.min(10, candidates.length));
+  const topN = candidates.slice(0, Math.min(40, candidates.length));
   const pick = topN[Math.floor(Math.random() * topN.length)];
   return { team1: pick.team1, team2: pick.team2 };
 }
@@ -173,6 +185,65 @@ function pickRoleForPlayer(
   return available[0] ?? ALL_ROLES[0];
 }
 
+/** Role z N najwyższych grup priorytetu (1 = tylko P1). */
+export function getUnlockedPriorityRoles(
+  player: LobbyPlayer,
+  unlockedGroups: number
+): LoLRole[] {
+  return getWeightedUnlockedRoles(player, unlockedGroups).map((e) => e.role);
+}
+
+/**
+ * Pula ról z wagami: nowo odblokowana grupa priorytetu ma 2× szansę
+ * względem wcześniej odblokowanych.
+ */
+export function getWeightedUnlockedRoles(
+  player: LobbyPlayer,
+  unlockedGroups: number
+): { role: LoLRole; weight: number }[] {
+  const groups = [...player.rolePriorities].sort(
+    (a, b) => a.priority - b.priority
+  );
+  if (groups.length === 0) {
+    return ALL_ROLES.map((role) => ({ role, weight: 1 }));
+  }
+
+  const take = Math.max(1, Math.min(unlockedGroups, groups.length));
+  const newestIndex = take - 1;
+  const boostNewest = unlockedGroups > 1;
+  const result: { role: LoLRole; weight: number }[] = [];
+  const seen = new Set<LoLRole>();
+
+  for (let i = 0; i < take; i++) {
+    const weight = boostNewest && i === newestIndex ? 2 : 1;
+    for (const role of groups[i]!.roles) {
+      if (seen.has(role)) continue;
+      seen.add(role);
+      result.push({ role, weight });
+    }
+  }
+  return result;
+}
+
+function pickWeightedRoleFromPool(
+  weighted: { role: LoLRole; weight: number }[],
+  takenRoles: Set<LoLRole>,
+  fallbackPlayer: LobbyPlayer
+): LoLRole {
+  const free = weighted.filter((entry) => !takenRoles.has(entry.role));
+  if (free.length === 0) {
+    return pickRoleForPlayer(fallbackPlayer, takenRoles);
+  }
+
+  const total = free.reduce((sum, entry) => sum + entry.weight, 0);
+  let roll = Math.random() * total;
+  for (const entry of free) {
+    roll -= entry.weight;
+    if (roll <= 0) return entry.role;
+  }
+  return free[free.length - 1]!.role;
+}
+
 function toAssignment(player: LobbyPlayer, role: LoLRole): PlayerAssignment {
   return {
     uid: player.uid,
@@ -188,11 +259,12 @@ function toAssignment(player: LobbyPlayer, role: LoLRole): PlayerAssignment {
   };
 }
 
-/** Klasyczne przypisanie ról: od najniższej rangi, pierwsza wolna rola z priorytetu. */
+/** Klasyczne przypisanie ról: featured → (opcjonalnie Adrian) → od najniższej rangi. */
 export function assignRoles(
   team1: LobbyPlayer[],
   team2: LobbyPlayer[],
-  featured: FeaturedMatchup | null = null
+  featured: FeaturedMatchup | null = null,
+  priorityAssign?: BuildProposalOptions["classicPriorityAssign"]
 ): TeamProposal {
   const assignTeam = (
     team: LobbyPlayer[],
@@ -209,6 +281,27 @@ export function assignRoles(
         taken.add(featured.role);
         const idx = remaining.findIndex((p) => p.uid === lockedUid);
         if (idx >= 0) remaining.splice(idx, 1);
+      }
+    }
+
+    if (priorityAssign?.uid) {
+      const priorityIdx = remaining.findIndex(
+        (p) => p.uid === priorityAssign.uid
+      );
+      if (priorityIdx >= 0) {
+        const priorityPlayer = remaining[priorityIdx]!;
+        const weighted = getWeightedUnlockedRoles(
+          priorityPlayer,
+          priorityAssign.unlockedGroups
+        );
+        const role = pickWeightedRoleFromPool(
+          weighted,
+          taken,
+          priorityPlayer
+        );
+        assignments.push(toAssignment(priorityPlayer, role));
+        taken.add(role);
+        remaining.splice(priorityIdx, 1);
       }
     }
 
@@ -493,7 +586,7 @@ function buildScoredProposal(
   }
 
   if (candidates.length === 0 && featured) {
-    const { team1, team2 } = generateBalancedTeams(players, 4, 200, featured);
+    const { team1, team2 } = generateBalancedTeams(players, 10, 200, featured);
     return assignRoles(team1, team2, featured);
   }
 
@@ -549,50 +642,343 @@ export function buildFullProposal(
   const featured = normalizeFeaturedMatchup(players, options?.featuredMatchup);
 
   if (resolved === "classic") {
+    const maxDeviation = options?.classicMaxDeviation ?? 10;
     const { team1, team2 } = generateBalancedTeams(
       players,
-      4,
+      maxDeviation,
       200,
       featured
     );
-    return assignRoles(team1, team2, featured);
+    return assignRoles(
+      team1,
+      team2,
+      featured,
+      options?.classicPriorityAssign ?? null
+    );
   }
 
   return buildScoredProposal(players, resolved, featured);
 }
 
+function proposalRankDiff(proposal: TeamProposal): number {
+  return Math.abs(
+    getTeamPointsFromAssignments(proposal.team1) -
+      getTeamPointsFromAssignments(proposal.team2)
+  );
+}
+
+/** Klucz podziału 5v5 (bez ról, niezależny od zamiany Team1/Team2). */
+function partitionKey(proposal: TeamProposal): string {
+  const t1 = proposal.team1
+    .map((p) => p.uid)
+    .sort()
+    .join(",");
+  const t2 = proposal.team2
+    .map((p) => p.uid)
+    .sort()
+    .join(",");
+  return t1 < t2 ? `${t1}||${t2}` : `${t2}||${t1}`;
+}
+
+/** Pojedynek na linii (kolejność drużyn bez znaczenia). */
+function laneMatchupKey(proposal: TeamProposal, role: LoLRole): string {
+  const a = proposal.team1.find((p) => p.role === role);
+  const b = proposal.team2.find((p) => p.role === role);
+  if (!a || !b) return role;
+  const [x, y] = [a.uid, b.uid].sort();
+  return `${role}:${x}|${y}`;
+}
+
+/**
+ * Ile graczy musiałoby zmienić drużynę, żeby przejść z A do B
+ * (po najlepszym wyrównaniu lustrzanym Team1/Team2).
+ */
+function teamSideDistance(a: TeamProposal, b: TeamProposal): number {
+  const a1 = new Set(a.team1.map((p) => p.uid));
+  const b1 = new Set(b.team1.map((p) => p.uid));
+  const b2 = new Set(b.team2.map((p) => p.uid));
+  const overlapB1 = [...a1].filter((uid) => b1.has(uid)).length;
+  const overlapB2 = [...a1].filter((uid) => b2.has(uid)).length;
+  return 5 - Math.max(overlapB1, overlapB2);
+}
+
+/** Ile linii ma ten sam pojedynek (z pominięciem featured). */
+function sharedLaneMatchups(
+  a: TeamProposal,
+  b: TeamProposal,
+  lockedRole: LoLRole | null
+): number {
+  let shared = 0;
+  for (const role of ALL_ROLES) {
+    if (lockedRole && role === lockedRole) continue;
+    if (laneMatchupKey(a, role) === laneMatchupKey(b, role)) shared++;
+  }
+  return shared;
+}
+
+function isCompositionDiverse(
+  candidate: TeamProposal,
+  taken: TeamProposal[],
+  minSideSwitches: number,
+  maxSharedMatchups: number,
+  lockedRole: LoLRole | null
+): boolean {
+  if (taken.some((t) => proposalsAreEqual(t, candidate))) return false;
+  if (taken.some((t) => partitionKey(t) === partitionKey(candidate))) {
+    return false;
+  }
+  for (const t of taken) {
+    if (teamSideDistance(t, candidate) < minSideSwitches) return false;
+    if (sharedLaneMatchups(t, candidate, lockedRole) > maxSharedMatchups) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function pickDiverseFromBand(
+  scored: { proposal: TeamProposal; diff: number }[],
+  start: number,
+  end: number,
+  taken: TeamProposal[],
+  minSideSwitches: number,
+  maxSharedMatchups: number,
+  lockedRole: LoLRole | null
+): TeamProposal | null {
+  const slice = scored.slice(start, Math.max(start + 1, end));
+  const order = shuffle(slice);
+  for (const entry of order) {
+    if (
+      isCompositionDiverse(
+        entry.proposal,
+        taken,
+        minSideSwitches,
+        maxSharedMatchups,
+        lockedRole
+      )
+    ) {
+      return entry.proposal;
+    }
+  }
+  return null;
+}
+
+function pickDiverseProposal(
+  scored: { proposal: TeamProposal; diff: number }[],
+  preferStart: number,
+  preferEnd: number,
+  taken: TeamProposal[],
+  lockedRole: LoLRole | null
+): TeamProposal {
+  // 0 shared = żaden powtórzony pojedynek na linii; potem luzujemy.
+  const sharedLimits = [0, 1, 2, 4];
+  const switchLimits = [3, 2, 1];
+
+  for (const maxShared of sharedLimits) {
+    for (const minSwitches of switchLimits) {
+      const fromBand = pickDiverseFromBand(
+        scored,
+        preferStart,
+        preferEnd,
+        taken,
+        minSwitches,
+        maxShared,
+        lockedRole
+      );
+      if (fromBand) return fromBand;
+
+      const anywhere = pickDiverseFromBand(
+        scored,
+        0,
+        scored.length,
+        taken,
+        minSwitches,
+        maxShared,
+        lockedRole
+      );
+      if (anywhere) return anywhere;
+    }
+  }
+
+  for (const entry of scored) {
+    if (!taken.some((t) => proposalsAreEqual(t, entry.proposal))) {
+      return entry.proposal;
+    }
+  }
+  return scored[Math.min(preferStart, scored.length - 1)]!.proposal;
+}
+
+function maybePerturbTeamRoles(
+  team: PlayerAssignment[],
+  lockedUid: string | null
+): PlayerAssignment[] {
+  const swappable = team
+    .map((player, index) => ({ player, index }))
+    .filter((entry) => entry.player.uid !== lockedUid);
+  if (swappable.length < 2) return team;
+
+  const i = Math.floor(Math.random() * swappable.length);
+  let j = Math.floor(Math.random() * swappable.length);
+  if (j === i) j = (j + 1) % swappable.length;
+
+  const a = swappable[i]!;
+  const b = swappable[j]!;
+  const next = team.map((player) => ({ ...player }));
+  const roleA = next[a.index]!.role;
+  next[a.index] = { ...next[a.index]!, role: next[b.index]!.role };
+  next[b.index] = { ...next[b.index]!, role: roleA };
+  return next;
+}
+
+/** Permutacja ról (bez ruszania featured), by zróżnicować pojedynki w classic. */
+function perturbProposalRoles(
+  proposal: TeamProposal,
+  featured: FeaturedMatchup | null,
+  swaps = 1
+): TeamProposal {
+  const lock1 =
+    featured &&
+    proposal.team1.some((p) => p.uid === featured.uidA || p.uid === featured.uidB)
+      ? proposal.team1.find(
+          (p) => p.uid === featured.uidA || p.uid === featured.uidB
+        )!.uid
+      : null;
+  const lock2 =
+    featured &&
+    proposal.team2.some((p) => p.uid === featured.uidA || p.uid === featured.uidB)
+      ? proposal.team2.find(
+          (p) => p.uid === featured.uidA || p.uid === featured.uidB
+        )!.uid
+      : null;
+
+  let next = proposal;
+  for (let i = 0; i < swaps; i++) {
+    next = {
+      team1: maybePerturbTeamRoles(next.team1, lock1),
+      team2: maybePerturbTeamRoles(next.team2, lock2),
+    };
+  }
+  return next;
+}
+
+/**
+ * Generuje 3 propozycje reshuffle:
+ * A — najmniejsze deviation, B — średnie, C — największe.
+ * Muszą różnić się podziałem drużyn ORAZ pojedynkami na liniach
+ * (np. nie ten sam Top we wszystkich trzech).
+ */
 export function generateDistinctProposals(
   players: LobbyPlayer[],
   mode: BalanceMode | undefined = "classic",
   options?: {
-    /** Składy, których A/B nie mogą powtórzyć (np. oryginalne losowanie). */
+    /** Składy, których A/B/C nie mogą powtórzyć (np. oryginalne losowanie). */
     exclude?: TeamProposal[];
     maxAttempts?: number;
     featuredMatchup?: FeaturedMatchup | null;
   }
-): { proposalA: TeamProposal; proposalB: TeamProposal } {
-  const maxAttempts = options?.maxAttempts ?? 80;
+): {
+  proposalA: TeamProposal;
+  proposalB: TeamProposal;
+  proposalC: TeamProposal;
+} {
+  const maxAttempts = options?.maxAttempts ?? 200;
   const excluded = options?.exclude ?? [];
+  const featured = options?.featuredMatchup ?? null;
+  const lockedRole = featured?.role ?? null;
   const buildOptions: BuildProposalOptions = {
-    featuredMatchup: options?.featuredMatchup,
+    featuredMatchup: featured,
+    classicMaxDeviation: 20,
   };
 
-  const proposalA = generateProposalDifferentFrom(
-    players,
-    mode,
+  const pool: TeamProposal[] = [];
+  const seenPartitions = new Set<string>();
+  const seenMatchupSets = new Set<string>();
+
+  for (const excludedProposal of excluded) {
+    seenPartitions.add(partitionKey(excludedProposal));
+  }
+
+  const matchupSetKey = (proposal: TeamProposal) =>
+    ALL_ROLES.map((role) => laneMatchupKey(proposal, role)).join(";");
+
+  const isClassic = normalizeBalanceMode(mode) === "classic";
+
+  const tryAdd = (proposal: TeamProposal, maxPerPartition: number) => {
+    if (isProposalForbidden(proposal, [...excluded, ...pool])) return;
+    const key = partitionKey(proposal);
+    const mKey = matchupSetKey(proposal);
+    if (seenMatchupSets.has(mKey)) return;
+    const partitionCount = pool.filter((p) => partitionKey(p) === key).length;
+    if (partitionCount >= maxPerPartition) return;
+    seenPartitions.add(key);
+    seenMatchupSets.add(mKey);
+    pool.push(proposal);
+  };
+
+  for (let attempt = 0; attempt < maxAttempts && pool.length < 80; attempt++) {
+    const base = buildFullProposal(players, mode, buildOptions);
+    tryAdd(base, isClassic ? 4 : 1);
+
+    // Classic: te same drużyny + inne role → inne pojedynki na liniach
+    if (isClassic) {
+      for (let v = 0; v < 6; v++) {
+        tryAdd(
+          perturbProposalRoles(base, featured, 1 + (v % 3)),
+          4
+        );
+      }
+    }
+  }
+
+  for (let attempt = 0; attempt < maxAttempts && pool.length < 6; attempt++) {
+    let proposal = buildFullProposal(players, mode, buildOptions);
+    if (isClassic) {
+      proposal = perturbProposalRoles(
+        proposal,
+        featured,
+        1 + Math.floor(Math.random() * 3)
+      );
+    }
+    tryAdd(proposal, 8);
+  }
+
+  while (pool.length < 3) {
+    pool.push(buildFullProposal(players, mode, buildOptions));
+  }
+
+  const scored = pool
+    .map((proposal) => ({ proposal, diff: proposalRankDiff(proposal) }))
+    .sort((a, b) => a.diff - b.diff);
+
+  const n = scored.length;
+  const lowEnd = Math.max(1, Math.ceil(n * 0.3));
+  const midStart = Math.floor(n * 0.3);
+  const midEnd = Math.max(midStart + 1, Math.ceil(n * 0.7));
+  const highStart = Math.floor(n * 0.7);
+
+  const proposalA = pickDiverseProposal(
+    scored,
+    0,
+    lowEnd,
     excluded,
-    maxAttempts,
-    buildOptions
+    lockedRole
   );
-  const proposalB = generateProposalDifferentFrom(
-    players,
-    mode,
+  const proposalB = pickDiverseProposal(
+    scored,
+    midStart,
+    midEnd,
     [...excluded, proposalA],
-    maxAttempts,
-    buildOptions
+    lockedRole
+  );
+  const proposalC = pickDiverseProposal(
+    scored,
+    highStart,
+    n,
+    [...excluded, proposalA, proposalB],
+    lockedRole
   );
 
-  return { proposalA, proposalB };
+  return { proposalA, proposalB, proposalC };
 }
 
 export function getTeamPointsFromAssignments(team: PlayerAssignment[]): number {

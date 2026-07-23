@@ -16,6 +16,8 @@ interface TeamOverviewProps {
   team2?: PlayerAssignment[];
   votes?: Record<string, string>;
   compact?: boolean;
+  /** Czytelny wariant pod porównanie A/B/C (bez mirroringu i zbędnych pasków). */
+  dense?: boolean;
   currentUid?: string;
   winnerTeam?: 1 | 2;
   useLiveStats?: boolean;
@@ -44,6 +46,7 @@ export function TeamOverview({
   team2: team2Override,
   votes,
   compact = false,
+  dense = false,
   currentUid,
   winnerTeam,
   useLiveStats = true,
@@ -87,30 +90,37 @@ export function TeamOverview({
     useLiveStats ? enrichPlayer(player, resolvedLiveUsers) : player;
 
   return (
-    <div className="min-w-0 space-y-3">
+    <div className={cn("min-w-0", dense ? "space-y-2" : "space-y-3")}>
       {showTeamPoints && team1.length > 0 && team2.length > 0 && (
-        <p className="text-center text-xs text-slate-400">
+        <p
+          className={cn(
+            "text-center font-medium",
+            dense ? "text-xs text-slate-300" : "text-xs text-slate-400"
+          )}
+        >
           Punkty: Team 1{" "}
-          <span className="font-semibold text-slate-200">{team1Points}</span>
+          <span className="font-semibold text-slate-100">{team1Points}</span>
           {" · "}
           Team 2{" "}
-          <span className="font-semibold text-slate-200">{team2Points}</span>
+          <span className="font-semibold text-slate-100">{team2Points}</span>
           {" · "}
           różnica{" "}
-          <span className="font-semibold text-slate-300">{pointsDiff}</span>
+          <span className="font-semibold text-indigo-300">{pointsDiff}</span>
         </p>
       )}
       <div
         className={cn(
           "grid min-w-0 items-center text-center",
-          compact
-            ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
-            : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4"
+          dense
+            ? "grid-cols-[minmax(0,1fr)_2.75rem_minmax(0,1fr)] gap-2"
+            : compact
+              ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
+              : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4"
         )}
       >
-        <TeamColumnLabel team={1} winnerTeam={winnerTeam} compact={compact} />
+        <TeamColumnLabel team={1} winnerTeam={winnerTeam} compact={compact || dense} />
         <span aria-hidden="true" />
-        <TeamColumnLabel team={2} winnerTeam={winnerTeam} compact={compact} />
+        <TeamColumnLabel team={2} winnerTeam={winnerTeam} compact={compact || dense} />
       </div>
 
       {REVEAL_ROLE_ORDER.map((role) => {
@@ -130,50 +140,46 @@ export function TeamOverview({
             key={role}
             className={cn(
               "relative grid min-w-0 items-stretch",
-              compact
-                ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
-                : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4",
+              dense
+                ? "grid-cols-[minmax(0,1fr)_2.75rem_minmax(0,1fr)] gap-2"
+                : compact
+                  ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
+                  : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4",
               featured &&
-                "rounded-xl bg-amber-500/10 ring-2 ring-amber-400/70 shadow-[0_0_24px_-8px_rgba(251,191,36,0.55)]"
+                "rounded-xl bg-amber-500/10 ring-2 ring-amber-400/70 shadow-[0_0_24px_-8px_rgba(251,191,36,0.55)]",
+              featured && dense && "px-1 py-1"
             )}
           >
-            {featured && (
-              <div
-                className={cn(
-                  "pointer-events-none absolute left-1/2 z-10 -translate-x-1/2",
-                  compact ? "-top-2" : "-top-2.5"
-                )}
-              >
-                <span
-                  className={cn(
-                    "rounded-full border border-amber-400/50 bg-amber-950/90 font-semibold uppercase tracking-wide text-amber-200",
-                    compact
-                      ? "px-1.5 py-0.5 text-[8px]"
-                      : "px-2.5 py-0.5 text-[10px]"
-                  )}
-                >
+            {featured && !dense && !compact && (
+              <div className="pointer-events-none absolute left-1/2 z-10 -top-2.5 -translate-x-1/2">
+                <span className="rounded-full border border-amber-400/50 bg-amber-950/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
                   Featured Matchup
                 </span>
               </div>
             )}
-            <div className="min-w-0 overflow-hidden">
+            <div className="min-w-0">
               <PlayerBanner
                 player={p1}
                 role={role}
                 voted={p1 ? !!votes?.[p1.uid] : false}
                 isCurrentUser={p1?.uid === currentUid}
-                mirrored
-                compact={compact}
+                mirrored={!dense}
+                compact={compact && !dense}
+                dense={dense}
                 showRolePriorities={showRolePriorities}
-                className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
+                className={cn("h-full", featured && !dense && "ring-1 ring-amber-400/30")}
               />
             </div>
             <div className="flex flex-col items-center justify-center gap-0.5">
               <span
                 className={cn(
                   "text-center font-semibold",
-                  featured ? "text-amber-200" : "text-slate-300",
-                  compact ? "text-[10px] leading-tight" : "text-sm"
+                  featured ? "text-amber-200" : dense ? "text-slate-200" : "text-slate-300",
+                  dense
+                    ? "text-[11px] leading-tight"
+                    : compact
+                      ? "text-[10px] leading-tight"
+                      : "text-sm"
                 )}
               >
                 {getRoleLabel(role)}
@@ -182,22 +188,23 @@ export function TeamOverview({
                 <span
                   className={cn(
                     "font-bold uppercase tracking-wider text-amber-400/90",
-                    compact ? "text-[8px]" : "text-[10px]"
+                    dense || compact ? "text-[8px]" : "text-[10px]"
                   )}
                 >
                   vs
                 </span>
               )}
             </div>
-            <div className="min-w-0 overflow-hidden">
+            <div className="min-w-0">
               <PlayerBanner
                 player={p2}
                 role={role}
                 voted={p2 ? !!votes?.[p2.uid] : false}
                 isCurrentUser={p2?.uid === currentUid}
-                compact={compact}
+                compact={compact && !dense}
+                dense={dense}
                 showRolePriorities={showRolePriorities}
-                className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
+                className={cn("h-full", featured && !dense && "ring-1 ring-amber-400/30")}
               />
             </div>
           </div>
