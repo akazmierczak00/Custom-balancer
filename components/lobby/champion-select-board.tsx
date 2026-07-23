@@ -67,6 +67,7 @@ function TeamBanColumn({
   hoverChampion,
   hoverBanNone,
   align,
+  modifiers,
 }: {
   team: 1 | 2;
   bans: (ChampionPickRef | null)[];
@@ -75,11 +76,21 @@ function TeamBanColumn({
   hoverChampion: ChampionCatalogEntry | null;
   hoverBanNone: boolean;
   align: "start" | "end";
+  modifiers: DraftModifiers | null | undefined;
 }) {
   /** Sloty ban1 to 0–2; ekstra bany zaczynają się od 3; ban2 idzie po ekstra. */
   const ban1Count = 3;
   const extraStart = ban1Count;
-  const regularIndices =
+  const hideBan1 =
+    !!modifiers?.noBans &&
+    team === modifiers.adrianTeam &&
+    (modifiers.noBans === "ban1" || modifiers.noBans === "all");
+  const hideBan2 =
+    !!modifiers?.noBans &&
+    team === modifiers.adrianTeam &&
+    (modifiers.noBans === "ban2" || modifiers.noBans === "all");
+
+  const regularIndices = (
     extraCount > 0
       ? [
           ...Array.from({ length: ban1Count }, (_, i) => i),
@@ -88,7 +99,12 @@ function TeamBanColumn({
             (_, i) => ban1Count + extraCount + i
           ),
         ]
-      : bans.map((_, i) => i);
+      : bans.map((_, i) => i)
+  ).filter((slot) => {
+    const isBan1 = slot < ban1Count;
+    if (isBan1) return !hideBan1;
+    return !hideBan2;
+  });
   const extraIndices =
     extraCount > 0
       ? Array.from({ length: extraCount }, (_, i) => extraStart + i)
@@ -107,13 +123,19 @@ function TeamBanColumn({
     };
   };
 
+  if (regularIndices.length === 0 && extraIndices.length === 0) {
+    return <div />;
+  }
+
   return (
     <div className={cn("flex flex-col gap-1", align === "start" ? "items-start" : "items-end")}>
-      <div className={cn("flex gap-1.5", justify)}>
-        {regularIndices.map((slot) => (
-          <BanSlot key={`b${team}-${slot}`} {...slotProps(slot, "md")} />
-        ))}
-      </div>
+      {regularIndices.length > 0 && (
+        <div className={cn("flex gap-1.5", justify)}>
+          {regularIndices.map((slot) => (
+            <BanSlot key={`b${team}-${slot}`} {...slotProps(slot, "md")} />
+          ))}
+        </div>
+      )}
       {extraIndices.length > 0 && (
         <div className={cn("flex gap-1", justify)}>
           {extraIndices.map((slot) => (
@@ -748,6 +770,7 @@ export function ChampionSelectBoard({
               hoverChampion={hoverChampion}
               hoverBanNone={!!hoverBanNone}
               align="start"
+              modifiers={state.modifiers}
             />
             <TeamBanColumn
               team={2}
@@ -757,6 +780,7 @@ export function ChampionSelectBoard({
               hoverChampion={hoverChampion}
               hoverBanNone={!!hoverBanNone}
               align="end"
+              modifiers={state.modifiers}
             />
           </div>
 
