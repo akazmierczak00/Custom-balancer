@@ -117,7 +117,7 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
               Wypisz się
             </Button>
           )}
-          {isAdmin && (
+          {isAdmin && !isCompleted && (
             <Button
               size="sm"
               variant="destructive"
