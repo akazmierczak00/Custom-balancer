@@ -43,6 +43,7 @@ import {
   CHAMPION_SELECT_SWAP_SECONDS,
   CHAMPION_SELECT_BAN_NONE_ID,
   applyPickOrderSwap,
+  clearSwapRequestsForUid,
   getActingPlayerForTurn,
   getCurrentTurn,
   getLegalChampions,
@@ -1419,12 +1420,16 @@ export async function lockChampionSelectAction(lobbyId: string, uid: string) {
       throw new Error("Ta postać jest niedostępna");
     }
 
-    const next = applyActionToState(
+    const nextRaw = applyActionToState(
       state,
       turn,
       toChampionPickRef(chosen),
       seat.role
     );
+    const next =
+      turn.kind === "pick"
+        ? clearSwapRequestsForUid(nextRaw, seat.uid)
+        : nextRaw;
     tx.update(lobbyRef, {
       championSelect: next,
       updatedAt: serverTimestamp(),
@@ -1474,7 +1479,11 @@ export async function resolveChampionSelectTimeout(lobbyId: string) {
       }
     }
 
-    const next = applyActionToState(state, turn, pickRef, seat.role);
+    const nextRaw = applyActionToState(state, turn, pickRef, seat.role);
+    const next =
+      turn.kind === "pick"
+        ? clearSwapRequestsForUid(nextRaw, seat.uid)
+        : nextRaw;
     tx.update(lobbyRef, {
       championSelect: next,
       updatedAt: serverTimestamp(),
@@ -1520,7 +1529,9 @@ export async function requestChampionSelectSwap(
       throw new Error("Wymiana tylko w ramach własnej drużyny");
     }
     if (!isPickOrderSwapAllowed(state, lobby, fromUid, toUid, team)) {
-      throw new Error("Ta wymiana jest zablokowana przez obostrzenie");
+      throw new Error(
+        "Nie można się wymieniać po wybraniu postaci albo przez obostrzenie"
+      );
     }
 
     const active = pruneExpiredSwapRequests(state.swapRequests);

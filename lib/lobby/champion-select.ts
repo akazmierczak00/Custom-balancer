@@ -399,7 +399,32 @@ export function isChampionSelectSwapWindowOpen(
   return remainingMs >= CHAMPION_SELECT_SWAP_LOCKOUT_SECONDS * 1000;
 }
 
-/** Walidacja swapa względem obostrzenia kolejności. */
+/** Gracz ma już zablokowanego championa (po swoim picku). */
+export function playerHasLockedPick(
+  state: ChampionSelectState,
+  lobby: Pick<Lobby, "team1" | "team2">,
+  uid: string
+): boolean {
+  const inTeam1 = lobby.team1.find((p) => p.uid === uid);
+  if (inTeam1) return isChampionPickRef(state.picks.team1[inTeam1.role]);
+  const inTeam2 = lobby.team2.find((p) => p.uid === uid);
+  if (inTeam2) return isChampionPickRef(state.picks.team2[inTeam2.role]);
+  return false;
+}
+
+export function clearSwapRequestsForUid(
+  state: ChampionSelectState,
+  uid: string
+): ChampionSelectState {
+  return {
+    ...state,
+    swapRequests: pruneExpiredSwapRequests(state.swapRequests).filter(
+      (r) => r.fromUid !== uid && r.toUid !== uid
+    ),
+  };
+}
+
+/** Walidacja swapa względem obostrzenia kolejności i stanu picków. */
 export function isPickOrderSwapAllowed(
   state: ChampionSelectState,
   lobby: Pick<Lobby, "team1" | "team2" | "createdBy">,
@@ -407,6 +432,10 @@ export function isPickOrderSwapAllowed(
   toUid: string,
   team: 1 | 2
 ): boolean {
+  if (fromUid === toUid) return false;
+  if (playerHasLockedPick(state, lobby, fromUid)) return false;
+  if (playerHasLockedPick(state, lobby, toUid)) return false;
+
   const modifiers = state.modifiers ?? resolveDraftModifiers(lobby as Lobby);
   if (!modifiers?.pickOrderMode) return true;
   if (team !== modifiers.adrianTeam) return true;
@@ -440,7 +469,9 @@ export function applyPickOrderSwap(
   team: 1 | 2
 ): ChampionSelectState {
   if (!isPickOrderSwapAllowed(state, lobby, fromUid, toUid, team)) {
-    throw new Error("Ta wymiana jest zablokowana przez obostrzenie");
+    throw new Error(
+      "Nie można się wymieniać po wybraniu postaci albo przez obostrzenie"
+    );
   }
 
   const pickOrder = {
