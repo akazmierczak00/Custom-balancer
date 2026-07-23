@@ -109,6 +109,11 @@ function TeamBanColumn({
 
   return (
     <div className={cn("flex flex-col gap-1", align === "start" ? "items-start" : "items-end")}>
+      <div className={cn("flex gap-1.5", justify)}>
+        {regularIndices.map((slot) => (
+          <BanSlot key={`b${team}-${slot}`} {...slotProps(slot, "md")} />
+        ))}
+      </div>
       {extraIndices.length > 0 && (
         <div className={cn("flex gap-1", justify)}>
           {extraIndices.map((slot) => (
@@ -116,11 +121,6 @@ function TeamBanColumn({
           ))}
         </div>
       )}
-      <div className={cn("flex gap-1.5", justify)}>
-        {regularIndices.map((slot) => (
-          <BanSlot key={`b${team}-${slot}`} {...slotProps(slot, "md")} />
-        ))}
-      </div>
     </div>
   );
 }
