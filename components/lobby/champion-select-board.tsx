@@ -867,7 +867,7 @@ export function ChampionSelectBoard({
                           ? "border-amber-400/70 bg-amber-950/40"
                           : "border-slate-800 bg-slate-900/40",
                         concluded || !canAct
-                          ? "cursor-not-allowed opacity-35"
+                          ? "cursor-not-allowed"
                           : "hover:border-slate-500"
                       )}
                     >
@@ -881,11 +881,10 @@ export function ChampionSelectBoard({
                   )}
                   {filteredChampions.map((champion) => {
                     const taken = takenIds.has(champion.id);
-                    const disabled =
-                      concluded ||
+                    const notPickable =
                       taken ||
-                      !canAct ||
                       (canAct && !!legalIds && !legalIds.has(champion.id));
+                    const clickDisabled = concluded || !canAct || notPickable;
                     const selected = state.hoverChampionId === champion.id;
                     const lockedForAdrian =
                       showAdrianLocks && !adrianNarrowIds!.has(champion.id);
@@ -894,7 +893,7 @@ export function ChampionSelectBoard({
                       <button
                         key={champion.id}
                         type="button"
-                        disabled={disabled}
+                        disabled={clickDisabled}
                         onClick={() => void onHover(champion.id)}
                         title={
                           lockedForAdrian
@@ -906,11 +905,11 @@ export function ChampionSelectBoard({
                           selected
                             ? "border-amber-400/70 bg-amber-950/40"
                             : "border-slate-800 bg-slate-900/40",
-                          disabled
+                          notPickable || concluded
                             ? "cursor-not-allowed opacity-35 grayscale"
                             : canAct
                               ? "hover:border-slate-500"
-                              : "opacity-70"
+                              : "cursor-default"
                         )}
                       >
                         <span className="relative inline-block">

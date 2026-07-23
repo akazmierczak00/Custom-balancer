@@ -1460,7 +1460,12 @@ export async function resolveChampionSelectTimeout(lobbyId: string) {
     if (!seat) return;
 
     let pickRef: ReturnType<typeof toChampionPickRef> | { none: true };
-    if (turn.kind === "ban") {
+
+    if (
+      turn.kind === "ban" &&
+      (!state.hoverChampionId ||
+        state.hoverChampionId === CHAMPION_SELECT_BAN_NONE_ID)
+    ) {
       pickRef = { none: true };
     } else {
       const legal = getLegalChampions({
@@ -1471,11 +1476,16 @@ export async function resolveChampionSelectTimeout(lobbyId: string) {
         adrianUid: lobby.createdBy,
         narrowRemainingIds: getNarrowRemainingIdSet(lobby),
       });
-      const random = pickRandomLegalChampion(legal);
-      if (!random) {
+      const hovered = state.hoverChampionId
+        ? legal.find((c) => c.id === state.hoverChampionId)
+        : undefined;
+      if (hovered) {
+        pickRef = toChampionPickRef(hovered);
+      } else if (turn.kind === "ban") {
         pickRef = { none: true };
       } else {
-        pickRef = toChampionPickRef(random);
+        const random = pickRandomLegalChampion(legal);
+        pickRef = random ? toChampionPickRef(random) : { none: true };
       }
     }
 
