@@ -562,7 +562,13 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
         </div>
       )}
 
-      {lobby.status === "champion_select" && <ChampionSelectBoard />}
+      {lobby.status === "champion_select" && (
+        <ChampionSelectBoard
+          lobby={lobby}
+          currentUid={profile.uid}
+          isAdmin={adminView}
+        />
+      )}
 
       {lobby.status === "session_summary" && (
         <SessionSummaryPanel lobby={lobby} isAdmin={adminView} />

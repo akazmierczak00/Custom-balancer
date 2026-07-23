@@ -37,6 +37,24 @@ import {
 } from "@/lib/champions/narrow-pool";
 import { ChampionCatalogEntry } from "@/lib/champions/types";
 import {
+  applyActionToState,
+  createInitialChampionSelect,
+  CHAMPION_SELECT_TURN_SECONDS,
+  CHAMPION_SELECT_SWAP_SECONDS,
+  applyPickOrderSwap,
+  getActingPlayerForTurn,
+  getCurrentTurn,
+  getLegalChampions,
+  getNarrowRemainingIdSet,
+  getPlayerForTurn,
+  isChampionSelectSwapWindowOpen,
+  isPickOrderSwapAllowed,
+  pickRandomLegalChampion,
+  pruneExpiredSwapRequests,
+  swapPairKey,
+  toChampionPickRef,
+} from "@/lib/lobby/champion-select";
+import {
   sanitizeWeaknessForm,
   WeaknessFormInput,
 } from "@/lib/weaknesses/helpers";
@@ -1265,7 +1283,7 @@ export async function startPlaying(lobbyId: string) {
   });
 }
 
-/** Admin: przejście do pustej planszy champion select. */
+/** Admin: start champion select z pustym stanem draftu. */
 export async function startChampionSelect(lobbyId: string) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   const snap = await getDoc(lobbyRef);
@@ -1279,10 +1297,366 @@ export async function startChampionSelect(lobbyId: string) {
     throw new Error("Champion select dostępny po zatwierdzeniu osłabień");
   }
 
+  const turnEndsAt = Timestamp.fromMillis(
+    Date.now() + CHAMPION_SELECT_TURN_SECONDS * 1000
+  );
+
   await updateDoc(lobbyRef, {
     status: "champion_select",
     phaseTimerEndsAt: null,
+    championSelect: createInitialChampionSelect(turnEndsAt, lobby),
     updatedAt: serverTimestamp(),
+  });
+}
+
+export async function hoverChampionSelect(
+  lobbyId: string,
+  uid: string,
+  championId: string | null
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = { id: snap.id, ...snap.data() } as Lobby;
+    if (lobby.status !== "champion_select") {
+      throw new Error("Brak aktywnego champion select");
+    }
+    const state = lobby.championSelect;
+    if (!state || state.phase === "concluded") {
+      throw new Error("Draft zakończony");
+    }
+
+    const turn = getCurrentTurn(state);
+    if (!turn) throw new Error("Brak aktywnej tury");
+
+    const actor = getActingPlayerForTurn(lobby, turn, state);
+    let canProxy = uid === lobby.createdBy;
+    if (!canProxy && actor && actor.uid !== uid) {
+      const adminSnap = await tx.get(doc(getFirebaseDb(), "users", uid));
+      canProxy =
+        adminSnap.exists() &&
+        (adminSnap.data() as UserProfile).role === "admin";
+    }
+    if (!actor || (actor.uid !== uid && !canProxy)) {
+      throw new Error("To nie Twoja tura");
+    }
+
+    tx.update(lobbyRef, {
+      championSelect: {
+        ...state,
+        hoverChampionId: championId,
+      },
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function lockChampionSelectAction(lobbyId: string, uid: string) {
+  const catalog = await loadChampionCatalog();
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = { id: snap.id, ...snap.data() } as Lobby;
+    if (lobby.status !== "champion_select") {
+      throw new Error("Brak aktywnego champion select");
+    }
+    const state = lobby.championSelect;
+    if (!state || state.phase === "concluded") {
+      throw new Error("Draft zakończony");
+    }
+
+    const turn = getCurrentTurn(state);
+    if (!turn) throw new Error("Brak aktywnej tury");
+
+    const seat = getPlayerForTurn(lobby, turn, state);
+    const actor = getActingPlayerForTurn(lobby, turn, state);
+    let canProxy = uid === lobby.createdBy;
+    if (!canProxy && actor && actor.uid !== uid) {
+      const adminSnap = await tx.get(doc(getFirebaseDb(), "users", uid));
+      canProxy =
+        adminSnap.exists() &&
+        (adminSnap.data() as UserProfile).role === "admin";
+    }
+    if (!seat || !actor || (actor.uid !== uid && !canProxy)) {
+      throw new Error("To nie Twoja tura");
+    }
+
+    if (!state.hoverChampionId) {
+      throw new Error("Najpierw wybierz postać");
+    }
+
+    const legal = getLegalChampions({
+      catalog: catalog.champions,
+      state,
+      turn,
+      seatUid: seat.uid,
+      adrianUid: lobby.createdBy,
+      narrowRemainingIds: getNarrowRemainingIdSet(lobby),
+    });
+    const chosen = legal.find((c) => c.id === state.hoverChampionId);
+    if (!chosen) {
+      throw new Error("Ta postać jest niedostępna");
+    }
+
+    const next = applyActionToState(
+      state,
+      turn,
+      toChampionPickRef(chosen),
+      seat.role
+    );
+    tx.update(lobbyRef, {
+      championSelect: next,
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function resolveChampionSelectTimeout(lobbyId: string) {
+  const catalog = await loadChampionCatalog();
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) return;
+
+    const lobby = { id: snap.id, ...snap.data() } as Lobby;
+    if (lobby.status !== "champion_select") return;
+
+    const state = lobby.championSelect;
+    if (!state || state.phase === "concluded") return;
+    if (!state.turnEndsAt) return;
+    if (state.turnEndsAt.toMillis() > Date.now() + 200) return;
+
+    const turn = getCurrentTurn(state);
+    if (!turn) return;
+
+    const seat = getPlayerForTurn(lobby, turn, state);
+    if (!seat) return;
+
+    let pickRef: ReturnType<typeof toChampionPickRef> | { none: true };
+    if (turn.kind === "ban") {
+      pickRef = { none: true };
+    } else {
+      const legal = getLegalChampions({
+        catalog: catalog.champions,
+        state,
+        turn,
+        seatUid: seat.uid,
+        adrianUid: lobby.createdBy,
+        narrowRemainingIds: getNarrowRemainingIdSet(lobby),
+      });
+      const random = pickRandomLegalChampion(legal);
+      if (!random) {
+        pickRef = { none: true };
+      } else {
+        pickRef = toChampionPickRef(random);
+      }
+    }
+
+    const next = applyActionToState(state, turn, pickRef, seat.role);
+    tx.update(lobbyRef, {
+      championSelect: next,
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function requestChampionSelectSwap(
+  lobbyId: string,
+  fromUid: string,
+  toUid: string
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = { id: snap.id, ...snap.data() } as Lobby;
+    if (lobby.status !== "champion_select") {
+      throw new Error("Brak aktywnego champion select");
+    }
+    const state = lobby.championSelect;
+    if (!state || state.phase === "concluded") {
+      throw new Error("Draft zakończony");
+    }
+    if (!isChampionSelectSwapWindowOpen(state)) {
+      throw new Error("Za mało czasu na turę, by prosić o wymianę");
+    }
+    if (fromUid === toUid) {
+      throw new Error("Nie możesz wymienić się ze sobą");
+    }
+
+    const team1HasFrom = lobby.team1.some((p) => p.uid === fromUid);
+    const team1HasTo = lobby.team1.some((p) => p.uid === toUid);
+    const team2HasFrom = lobby.team2.some((p) => p.uid === fromUid);
+    const team2HasTo = lobby.team2.some((p) => p.uid === toUid);
+
+    let team: 1 | 2 | null = null;
+    if (team1HasFrom && team1HasTo) team = 1;
+    else if (team2HasFrom && team2HasTo) team = 2;
+    if (!team) {
+      throw new Error("Wymiana tylko w ramach własnej drużyny");
+    }
+    if (!isPickOrderSwapAllowed(state, lobby, fromUid, toUid, team)) {
+      throw new Error("Ta wymiana jest zablokowana przez obostrzenie");
+    }
+
+    const active = pruneExpiredSwapRequests(state.swapRequests);
+    if (active.some((r) => r.fromUid === fromUid)) {
+      throw new Error("Masz już jedną prośbę o wymianę w toku");
+    }
+    const pair = swapPairKey(fromUid, toUid);
+    if (active.some((r) => swapPairKey(r.fromUid, r.toUid) === pair)) {
+      throw new Error("Wymiana z tą osobą jest już w toku");
+    }
+
+    const expiresAt = Timestamp.fromMillis(
+      Date.now() + CHAMPION_SELECT_SWAP_SECONDS * 1000
+    );
+
+    tx.update(lobbyRef, {
+      championSelect: {
+        ...state,
+        swapRequests: [
+          ...active,
+          { fromUid, toUid, team, expiresAt },
+        ],
+      },
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function respondChampionSelectSwap(
+  lobbyId: string,
+  responderUid: string,
+  fromUid: string,
+  toUid: string,
+  accept: boolean
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = { id: snap.id, ...snap.data() } as Lobby;
+    if (lobby.status !== "champion_select") {
+      throw new Error("Brak aktywnego champion select");
+    }
+    const state = lobby.championSelect;
+    if (!state || state.phase === "concluded") {
+      throw new Error("Draft zakończony");
+    }
+
+    let canProxy = responderUid === lobby.createdBy;
+    if (!canProxy && responderUid !== toUid) {
+      const adminSnap = await tx.get(doc(getFirebaseDb(), "users", responderUid));
+      canProxy =
+        adminSnap.exists() &&
+        (adminSnap.data() as UserProfile).role === "admin";
+    }
+    if (responderUid !== toUid && !canProxy) {
+      throw new Error("Nie możesz odpowiedzieć na tę wymianę");
+    }
+
+    const active = pruneExpiredSwapRequests(state.swapRequests);
+    const request = active.find(
+      (r) => r.fromUid === fromUid && r.toUid === toUid
+    );
+    if (!request) {
+      throw new Error("Brak aktywnej prośby o wymianę");
+    }
+
+    if (!accept) {
+      tx.update(lobbyRef, {
+        championSelect: {
+          ...state,
+          swapRequests: active.filter(
+            (r) => !(r.fromUid === fromUid && r.toUid === toUid)
+          ),
+        },
+        updatedAt: serverTimestamp(),
+      });
+      return;
+    }
+
+    if (!isChampionSelectSwapWindowOpen(state)) {
+      throw new Error("Za mało czasu na turę, by dokończyć wymianę");
+    }
+
+    const next = applyPickOrderSwap(
+      { ...state, swapRequests: active },
+      lobby,
+      request.fromUid,
+      request.toUid,
+      request.team
+    );
+    tx.update(lobbyRef, {
+      championSelect: next,
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function cancelChampionSelectSwap(
+  lobbyId: string,
+  fromUid: string,
+  toUid: string
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = { id: snap.id, ...snap.data() } as Lobby;
+    if (lobby.status !== "champion_select") return;
+    const state = lobby.championSelect;
+    if (!state) return;
+
+    const active = pruneExpiredSwapRequests(state.swapRequests).filter(
+      (r) => !(r.fromUid === fromUid && r.toUid === toUid)
+    );
+    tx.update(lobbyRef, {
+      championSelect: {
+        ...state,
+        swapRequests: active,
+      },
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export async function pruneChampionSelectSwaps(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) return;
+
+    const lobby = { id: snap.id, ...snap.data() } as Lobby;
+    if (lobby.status !== "champion_select") return;
+    const state = lobby.championSelect;
+    if (!state?.swapRequests?.length) return;
+
+    const active = pruneExpiredSwapRequests(state.swapRequests);
+    if (active.length === state.swapRequests.length) return;
+
+    tx.update(lobbyRef, {
+      championSelect: {
+        ...state,
+        swapRequests: active,
+      },
+      updatedAt: serverTimestamp(),
+    });
   });
 }
 
@@ -1616,6 +1990,11 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
 
   if (phase === "weakness_reveal") {
     await startWeaknessReveal(lobbyId);
+    return;
+  }
+
+  if (phase === "champion_select") {
+    await startChampionSelect(lobbyId);
     return;
   }
 

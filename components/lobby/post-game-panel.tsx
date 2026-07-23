@@ -114,6 +114,11 @@ export function PostGamePanel({ lobby, isAdmin }: PostGamePanelProps) {
   };
 
   if ((lobby.status === "final" || lobby.status === "playing") && isAdmin) {
+    // Zwycięzca po champion select jest wybierany na planszy CS (faza concluded).
+    // Tu zostaje fallback gdy admin pominie CS albo wróci do playing.
+    if (lobby.status === "final") {
+      return null;
+    }
     return (
       <Card>
         <CardHeader>
