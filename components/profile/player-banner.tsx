@@ -19,6 +19,9 @@ interface PlayerBannerProps {
   /** Jeszcze gęstszy wariant pod porównanie A/B/C — bez paska WR i historii. */
   dense?: boolean;
   showRolePriorities?: boolean;
+  /** Ikona wybranego championa (np. w podsumowaniu rundy). */
+  championIconUrl?: string | null;
+  championName?: string | null;
   className?: string;
 }
 
@@ -87,6 +90,8 @@ export function PlayerBanner({
   compact = false,
   dense = false,
   showRolePriorities = false,
+  championIconUrl,
+  championName,
   className,
 }: PlayerBannerProps) {
   if (!player) {
@@ -149,6 +154,15 @@ export function PlayerBanner({
           className
         )}
       >
+        {championIconUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={championIconUrl}
+            alt={championName ?? ""}
+            title={championName ?? undefined}
+            className="h-8 w-8 shrink-0 rounded object-cover ring-1 ring-slate-600"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold leading-tight text-slate-50">
             {nick}
@@ -198,6 +212,18 @@ export function PlayerBanner({
         className
       )}
     >
+      {championIconUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={championIconUrl}
+          alt={championName ?? ""}
+          title={championName ?? undefined}
+          className={cn(
+            "shrink-0 self-center rounded object-cover ring-1 ring-slate-600",
+            compact ? "h-12 w-12" : "h-14 w-14"
+          )}
+        />
+      )}
       <div
         className={cn(
           "relative flex min-h-32 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-800/80 p-4",

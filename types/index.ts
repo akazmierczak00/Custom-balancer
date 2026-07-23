@@ -176,6 +176,11 @@ export interface LobbyRoundRecord {
   team2: PlayerAssignment[];
   winnerTeam: 1 | 2;
   selectedWeaknesses: SelectedWeakness[];
+  /** Picki z champion select (rola → champion), jeśli draft był grany. */
+  picks?: {
+    team1: Record<LoLRole, ChampionPickRef | null>;
+    team2: Record<LoLRole, ChampionPickRef | null>;
+  };
   youtubeUrl?: string;
   completedAt: Timestamp;
 }

@@ -86,6 +86,7 @@ function RoundSummaryCard({ lobby, round, isAdmin }: RoundSummaryCardProps) {
           team1={round.team1}
           team2={round.team2}
           winnerTeam={round.winnerTeam}
+          picks={round.picks}
           useLiveStats={false}
           compact
           showRolePriorities={isAdmin}

@@ -51,6 +51,7 @@ import {
   isPickOrderSwapAllowed,
   pickRandomLegalChampion,
   pruneExpiredSwapRequests,
+  snapshotRoundPicks,
   swapPairKey,
   toChampionPickRef,
 } from "@/lib/lobby/champion-select";
@@ -1743,6 +1744,7 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
           team2: toFirestoreTeam(team2),
           winnerTeam: team,
           selectedWeaknesses: lobby.weaknesses?.selected ?? [],
+          picks: snapshotRoundPicks(lobby.championSelect?.picks),
           completedAt: Timestamp.now(),
         },
       ],

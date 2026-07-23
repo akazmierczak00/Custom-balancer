@@ -6,9 +6,10 @@ import { getTeamPointsFromAssignments } from "@/lib/algorithms/balanceTeams";
 import { subscribeToUsers } from "@/lib/firebase/firestore";
 import { useLobbyUsers } from "@/components/lobby/lobby-users-context";
 import { cn } from "@/lib/utils";
-import { Lobby, PlayerAssignment, UserProfile } from "@/types";
+import { Lobby, LoLRole, PlayerAssignment, UserProfile, ChampionPickRef } from "@/types";
 import { TeamColumnLabel } from "@/components/lobby/team-column-label";
 import { PlayerBanner } from "@/components/profile/player-banner";
+import { isChampionPickRef } from "@/lib/lobby/champion-select";
 
 interface TeamOverviewProps {
   lobby: Lobby;
@@ -23,6 +24,10 @@ interface TeamOverviewProps {
   useLiveStats?: boolean;
   showRolePriorities?: boolean;
   showTeamPoints?: boolean;
+  picks?: {
+    team1: Record<LoLRole, ChampionPickRef | null>;
+    team2: Record<LoLRole, ChampionPickRef | null>;
+  } | null;
 }
 
 function enrichPlayer(
@@ -52,6 +57,7 @@ export function TeamOverview({
   useLiveStats = true,
   showRolePriorities = false,
   showTeamPoints = false,
+  picks = null,
 }: TeamOverviewProps) {
   const team1 = team1Override ?? lobby.team1;
   const team2 = team2Override ?? lobby.team2;
@@ -126,6 +132,8 @@ export function TeamOverview({
       {REVEAL_ROLE_ORDER.map((role) => {
         const p1 = resolvePlayer(team1.find((player) => player.role === role));
         const p2 = resolvePlayer(team2.find((player) => player.role === role));
+        const pick1 = picks?.team1?.[role];
+        const pick2 = picks?.team2?.[role];
         const matchup = lobby.featuredMatchup;
         const featured =
           !!matchup &&
@@ -167,6 +175,10 @@ export function TeamOverview({
                 compact={compact && !dense}
                 dense={dense}
                 showRolePriorities={showRolePriorities}
+                championIconUrl={
+                  isChampionPickRef(pick1) ? pick1.iconUrl : null
+                }
+                championName={isChampionPickRef(pick1) ? pick1.name : null}
                 className={cn("h-full", featured && !dense && "ring-1 ring-amber-400/30")}
               />
             </div>
@@ -204,6 +216,10 @@ export function TeamOverview({
                 compact={compact && !dense}
                 dense={dense}
                 showRolePriorities={showRolePriorities}
+                championIconUrl={
+                  isChampionPickRef(pick2) ? pick2.iconUrl : null
+                }
+                championName={isChampionPickRef(pick2) ? pick2.name : null}
                 className={cn("h-full", featured && !dense && "ring-1 ring-amber-400/30")}
               />
             </div>

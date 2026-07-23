@@ -10,6 +10,7 @@ import type {
   ChampionSelectTurnSnapshot,
   DraftModifiers,
   Lobby,
+  LobbyRoundRecord,
   LoLRole,
   PlayerAssignment,
 } from "@/types";
@@ -67,6 +68,38 @@ export function emptyPicks(): Record<LoLRole, ChampionPickRef | null> {
     mid: null,
     adc: null,
     support: null,
+  };
+}
+
+/** Kopia picków bezpieczna do zapisu w roundHistory. */
+export function snapshotRoundPicks(
+  picks: ChampionSelectState["picks"] | null | undefined
+): NonNullable<LobbyRoundRecord["picks"]> {
+  const copySide = (
+    side: Record<LoLRole, ChampionPickRef | null> | undefined
+  ): Record<LoLRole, ChampionPickRef | null> => {
+    const out = emptyPicks();
+    for (const role of REVEAL_ROLE_ORDER) {
+      const pick = side?.[role] ?? null;
+      if (pick && "none" in pick && pick.none) {
+        out[role] = { none: true };
+      } else if (pick && "id" in pick) {
+        out[role] = {
+          id: pick.id,
+          key: pick.key,
+          name: pick.name,
+          iconUrl: pick.iconUrl,
+        };
+      } else {
+        out[role] = null;
+      }
+    }
+    return out;
+  };
+
+  return {
+    team1: copySide(picks?.team1),
+    team2: copySide(picks?.team2),
   };
 }
 
