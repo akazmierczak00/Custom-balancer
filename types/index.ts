@@ -170,6 +170,13 @@ export interface LobbyWeaknesses {
   };
 }
 
+/** Link POV YouTube przypisany do gracza z rundy. */
+export interface RoundPov {
+  youtubeUrl: string;
+  playerUid: string;
+  playerNick: string;
+}
+
 export interface LobbyRoundRecord {
   roundNumber: number;
   team1: PlayerAssignment[];
@@ -181,6 +188,9 @@ export interface LobbyRoundRecord {
     team1: Record<LoLRole, ChampionPickRef | null>;
     team2: Record<LoLRole, ChampionPickRef | null>;
   };
+  /** Jedno lub więcej POV z rundy (z wskazaniem gracza). */
+  povs?: RoundPov[];
+  /** @deprecated Używaj `povs` — zostawione dla starych zapisów. */
   youtubeUrl?: string;
   completedAt: Timestamp;
 }

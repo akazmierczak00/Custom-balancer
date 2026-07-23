@@ -83,6 +83,7 @@ import {
   MatchResult,
   PlayerAssignment,
   ProposalVoteChoice,
+  RoundPov,
   SelectedWeakness,
   TeamProposal,
   UserProfile,
@@ -1769,16 +1770,27 @@ export async function setWinner(lobbyId: string, team: 1 | 2) {
 export async function updateRoundMedia(
   lobbyId: string,
   roundNumber: number,
-  data: { youtubeUrl?: string }
+  data: { povs: RoundPov[] }
 ) {
   const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
   const snap = await getDoc(lobbyRef);
   if (!snap.exists()) throw new Error("Lobby nie istnieje");
 
   const lobby = snap.data() as Lobby;
-  const roundHistory = (lobby.roundHistory ?? []).map((round) =>
-    round.roundNumber === roundNumber ? { ...round, ...data } : round
-  );
+  const povs = data.povs
+    .map((pov) => ({
+      youtubeUrl: pov.youtubeUrl.trim(),
+      playerUid: pov.playerUid.trim(),
+      playerNick: pov.playerNick.trim(),
+    }))
+    .filter((pov) => pov.youtubeUrl && pov.playerUid && pov.playerNick);
+
+  const roundHistory = (lobby.roundHistory ?? []).map((round) => {
+    if (round.roundNumber !== roundNumber) return round;
+    const next = { ...round, povs };
+    delete next.youtubeUrl;
+    return next;
+  });
 
   await updateDoc(lobbyRef, {
     roundHistory,
