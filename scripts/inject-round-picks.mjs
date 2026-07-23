@@ -222,11 +222,64 @@ async function injectPicks(db, lobbyId, data, picksByRound) {
   console.log(`\nZapisano picks w lobby ${lobbyId}`);
 }
 
+async function setPlayerPick(db, lobbyId, data, nick, champRaw, roundNumber) {
+  const catalog = await loadChampionCatalog();
+  const champ = resolveChampion(catalog, champRaw);
+  if (!champ) throw new Error(`Nie znaleziono championa "${champRaw}"`);
+
+  const rounds = data.roundHistory ?? [];
+  if (!rounds.length) throw new Error("Brak rund");
+
+  let changed = 0;
+  const nextHistory = rounds.map((round) => {
+    if (roundNumber != null && Number(round.roundNumber) !== Number(roundNumber)) {
+      return round;
+    }
+
+    const allPlayers = [
+      ...(round.team1 ?? []).map((p) => ({ ...p, team: 1 })),
+      ...(round.team2 ?? []).map((p) => ({ ...p, team: 2 })),
+    ];
+    const player = allPlayers.find(
+      (p) => p.nick.toLowerCase() === nick.toLowerCase()
+    );
+    if (!player) return round;
+
+    const picks = {
+      team1: { ...emptyPicks(), ...(round.picks?.team1 ?? {}) },
+      team2: { ...emptyPicks(), ...(round.picks?.team2 ?? {}) },
+    };
+    const side = player.team === 1 ? picks.team1 : picks.team2;
+    const prev = side[player.role];
+    side[player.role] = {
+      id: champ.id,
+      key: champ.key,
+      name: champ.name,
+      iconUrl: champ.iconUrl,
+    };
+    changed += 1;
+    console.log(
+      `R${round.roundNumber} ${player.nick} (${player.role}): ${prev?.name ?? "—"} → ${champ.name}`
+    );
+    return { ...round, picks };
+  });
+
+  if (!changed) {
+    throw new Error(`Nie znaleziono gracza "${nick}" w wybranych rundach`);
+  }
+
+  await db.collection("lobbies").doc(lobbyId).update({
+    roundHistory: nextHistory,
+    updatedAt: new Date(),
+  });
+  console.log(`\nZapisano w lobby ${lobbyId}`);
+}
+
 async function main() {
-  const [cmd, prefix, picksPath] = process.argv.slice(2);
+  const [cmd, prefix, arg3, arg4, arg5] = process.argv.slice(2);
   if (!cmd || !prefix) {
     console.error(
-      "Użycie:\n  node scripts/inject-round-picks.mjs dump Ha8lhl\n  node scripts/inject-round-picks.mjs inject Ha8lhl picks.json"
+      "Użycie:\n  node scripts/inject-round-picks.mjs dump Ha8lhl\n  node scripts/inject-round-picks.mjs inject Ha8lhl picks.json\n  node scripts/inject-round-picks.mjs set-pick Ha8lhl Damian Malzahar [roundNumber]"
     );
     process.exit(1);
   }
@@ -241,9 +294,17 @@ async function main() {
   }
 
   if (cmd === "inject") {
-    if (!picksPath) throw new Error("Podaj ścieżkę do picks.json");
-    const picks = JSON.parse(readFileSync(resolve(picksPath), "utf8"));
+    if (!arg3) throw new Error("Podaj ścieżkę do picks.json");
+    const picks = JSON.parse(readFileSync(resolve(arg3), "utf8"));
     await injectPicks(db, id, data, picks);
+    return;
+  }
+
+  if (cmd === "set-pick") {
+    if (!arg3 || !arg4) {
+      throw new Error("Użycie: set-pick <lobbyPrefix> <nick> <champion> [round]");
+    }
+    await setPlayerPick(db, id, data, arg3, arg4, arg5);
     return;
   }
 
