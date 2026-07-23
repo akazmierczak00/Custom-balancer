@@ -15,7 +15,7 @@ import type {
   PlayerAssignment,
 } from "@/types";
 
-export const CHAMPION_SELECT_TURN_SECONDS = 60;
+export const CHAMPION_SELECT_TURN_SECONDS = 30;
 export const CHAMPION_SELECT_SWAP_SECONDS = 10;
 /** Hover/lock sentinel — świadomy ban NONE (nie timeout). */
 export const CHAMPION_SELECT_BAN_NONE_ID = "__NONE__";
