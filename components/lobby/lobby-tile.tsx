@@ -156,6 +156,7 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
                       team1={round.team1}
                       team2={round.team2}
                       winnerTeam={round.winnerTeam}
+                      picks={round.picks}
                     />
                   </div>
                 ))}

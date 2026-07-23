@@ -8,6 +8,7 @@ import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { getRoleLabel, REVEAL_ROLE_ORDER, ROLES } from "@/lib/constants/roles";
 import type { ChampionCatalogEntry } from "@/lib/champions/types";
 import {
+  CHAMPION_SELECT_BAN_NONE_ID,
   collectTakenChampionIds,
   describeDraftModifiers,
   ensurePickOrder,
@@ -71,12 +72,15 @@ function BanSlot({
   value,
   active,
   hover,
+  hoverNone,
 }: {
   value: ChampionPickRef | null;
   active?: boolean;
   hover?: ChampionCatalogEntry | null;
+  hoverNone?: boolean;
 }) {
   const showHover = !value && !!hover;
+  const showNoneHover = !value && !!hoverNone;
 
   return (
     <div
@@ -91,6 +95,8 @@ function BanSlot({
         <img src={value.iconUrl} alt={value.name} className="h-full w-full object-cover" />
       ) : value && "none" in value ? (
         <span className="text-[9px] font-bold text-slate-500">NONE</span>
+      ) : showNoneHover ? (
+        <span className="text-[9px] font-bold text-slate-400 opacity-70">NONE</span>
       ) : showHover ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -363,13 +369,21 @@ export function ChampionSelectBoard({
 
   const hoverChampion = useMemo(() => {
     if (!state?.hoverChampionId) return null;
+    if (state.hoverChampionId === CHAMPION_SELECT_BAN_NONE_ID) return null;
     return catalog.find((c) => c.id === state.hoverChampionId) ?? null;
   }, [catalog, state?.hoverChampionId]);
+
+  const hoverBanNone =
+    turn?.kind === "ban" &&
+    state?.hoverChampionId === CHAMPION_SELECT_BAN_NONE_ID;
 
   const filteredChampions = useMemo(() => {
     const q = search.trim().toLowerCase();
     return catalog.filter((c) => {
-      if (roleFilter !== "all" && !c.lanes.includes(roleFilter)) return false;
+      // Szukanie zawsze po całej puli — ignoruj zakładkę roli.
+      if (!q && roleFilter !== "all" && !c.lanes.includes(roleFilter)) {
+        return false;
+      }
       if (q && !c.name.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -664,6 +678,11 @@ export function ChampionSelectBoard({
                       ? hoverChampion
                       : null
                   }
+                  hoverNone={
+                    !!hoverBanNone &&
+                    turn?.team === 1 &&
+                    turn.banSlot === i
+                  }
                 />
               ))}
             </div>
@@ -684,6 +703,11 @@ export function ChampionSelectBoard({
                     turn.banSlot === i
                       ? hoverChampion
                       : null
+                  }
+                  hoverNone={
+                    !!hoverBanNone &&
+                    turn?.team === 2 &&
+                    turn.banSlot === i
                   }
                 />
               ))}
@@ -761,6 +785,30 @@ export function ChampionSelectBoard({
                   />
                 </div>
                 <div className="min-h-0 flex-1 grid grid-cols-4 content-start gap-1.5 overflow-y-auto p-2 sm:grid-cols-5 md:grid-cols-6">
+                  {turn?.kind === "ban" && (
+                    <button
+                      type="button"
+                      disabled={concluded || !canAct}
+                      onClick={() => void onHover(CHAMPION_SELECT_BAN_NONE_ID)}
+                      title="Ban none"
+                      className={cn(
+                        "flex flex-col items-center gap-0.5 rounded-md border p-1 transition-colors",
+                        state.hoverChampionId === CHAMPION_SELECT_BAN_NONE_ID
+                          ? "border-amber-400/70 bg-amber-950/40"
+                          : "border-slate-800 bg-slate-900/40",
+                        concluded || !canAct
+                          ? "cursor-not-allowed opacity-35"
+                          : "hover:border-slate-500"
+                      )}
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded bg-slate-950 text-[10px] font-bold text-slate-400">
+                        NONE
+                      </span>
+                      <span className="w-full truncate text-center text-[9px] text-slate-400">
+                        None
+                      </span>
+                    </button>
+                  )}
                   {filteredChampions.map((champion) => {
                     const taken = takenIds.has(champion.id);
                     const disabled =

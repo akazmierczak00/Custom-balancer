@@ -17,6 +17,8 @@ import type {
 
 export const CHAMPION_SELECT_TURN_SECONDS = 60;
 export const CHAMPION_SELECT_SWAP_SECONDS = 10;
+/** Hover/lock sentinel — świadomy ban NONE (nie timeout). */
+export const CHAMPION_SELECT_BAN_NONE_ID = "__NONE__";
 /** Poniżej tego progu na timerze tury nie wolno requestować ani akceptować swapa. */
 export const CHAMPION_SELECT_SWAP_LOCKOUT_SECONDS = 5;
 

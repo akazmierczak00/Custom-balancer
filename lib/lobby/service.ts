@@ -41,6 +41,7 @@ import {
   createInitialChampionSelect,
   CHAMPION_SELECT_TURN_SECONDS,
   CHAMPION_SELECT_SWAP_SECONDS,
+  CHAMPION_SELECT_BAN_NONE_ID,
   applyPickOrderSwap,
   getActingPlayerForTurn,
   getCurrentTurn,
@@ -1390,6 +1391,18 @@ export async function lockChampionSelectAction(lobbyId: string, uid: string) {
 
     if (!state.hoverChampionId) {
       throw new Error("Najpierw wybierz postać");
+    }
+
+    if (
+      turn.kind === "ban" &&
+      state.hoverChampionId === CHAMPION_SELECT_BAN_NONE_ID
+    ) {
+      const next = applyActionToState(state, turn, { none: true }, seat.role);
+      tx.update(lobbyRef, {
+        championSelect: next,
+        updatedAt: serverTimestamp(),
+      });
+      return;
     }
 
     const legal = getLegalChampions({

@@ -124,13 +124,16 @@ export async function fetchChampionCatalog(): Promise<{
       const detectedLanes = sortLanes([
         ...Array.from(lanesByKey.get(champion.key) ?? []),
       ]);
+      const lanes = sortLanes([
+        ...new Set([...(detectedLanes), ...(overrideLanes ?? [])]),
+      ]);
 
       return {
         id: champion.id,
         key: champion.key,
         name: champion.name,
         iconUrl: `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${champion.image.full}`,
-        lanes: overrideLanes ?? detectedLanes,
+        lanes,
       } satisfies ChampionCatalogEntry;
     })
     .sort((a, b) => a.name.localeCompare(b.name, "pl"));

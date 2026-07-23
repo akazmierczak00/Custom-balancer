@@ -154,15 +154,6 @@ export function PlayerBanner({
           className
         )}
       >
-        {championIconUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={championIconUrl}
-            alt={championName ?? ""}
-            title={championName ?? undefined}
-            className="h-8 w-8 shrink-0 rounded object-cover ring-1 ring-slate-600"
-          />
-        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold leading-tight text-slate-50">
             {nick}
@@ -199,6 +190,15 @@ export function PlayerBanner({
             {isSelector && <Sparkles className="h-3.5 w-3.5 text-amber-400" />}
           </div>
         )}
+        {championIconUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={championIconUrl}
+            alt={championName ?? ""}
+            title={championName ?? undefined}
+            className="h-8 w-8 shrink-0 rounded object-cover ring-1 ring-slate-600"
+          />
+        )}
       </div>
     );
   }
@@ -212,130 +212,146 @@ export function PlayerBanner({
         className
       )}
     >
-      {championIconUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={championIconUrl}
-          alt={championName ?? ""}
-          title={championName ?? undefined}
-          className={cn(
-            "shrink-0 self-center rounded object-cover ring-1 ring-slate-600",
-            compact ? "h-12 w-12" : "h-14 w-14"
-          )}
-        />
-      )}
       <div
         className={cn(
-          "relative flex min-h-32 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-800/80 p-4",
-          compact && "min-h-24 p-2",
+          "relative flex min-h-32 min-w-0 flex-1 items-stretch overflow-hidden rounded-lg border border-slate-700 bg-slate-800/80",
+          compact && "min-h-24",
           isCurrentUser && "bg-indigo-950/40 ring-2 ring-indigo-400/45",
-          isSelector && "ring-2 ring-amber-400"
+          isSelector && "ring-2 ring-amber-400",
+          mirrored ? "flex-row" : "flex-row-reverse"
         )}
       >
+        {championIconUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={championIconUrl}
+            alt={championName ?? ""}
+            title={championName ?? undefined}
+            className={cn(
+              "m-1.5 shrink-0 self-center rounded object-cover",
+              compact ? "h-14 w-14" : "h-[4.5rem] w-[4.5rem]"
+            )}
+          />
+        )}
         <div
           className={cn(
-            "flex min-w-0 items-start justify-between gap-2",
-            mirrored && "flex-row-reverse"
+            "flex min-w-0 flex-1 flex-col p-4",
+            compact && "p-2"
           )}
         >
-          <div className={cn("min-w-0 flex-1", mirrored && "text-right")}>
-            <p className="truncate font-semibold text-slate-100">
-              {nick}
-              {isTestBot && (
-                <span
-                  className={cn(
-                    "ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300",
-                    compact && "ml-1 px-1 py-0 text-[9px]"
-                  )}
-                >
-                  BOT
-                </span>
+          <div
+            className={cn(
+              "flex min-w-0 items-start justify-between gap-2",
+              mirrored && "flex-row-reverse"
+            )}
+          >
+            <div className={cn("min-w-0 flex-1", mirrored && "text-right")}>
+              <p className="truncate font-semibold text-slate-100">
+                {nick}
+                {isTestBot && (
+                  <span
+                    className={cn(
+                      "ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300",
+                      compact && "ml-1 px-1 py-0 text-[9px]"
+                    )}
+                  >
+                    BOT
+                  </span>
+                )}
+              </p>
+              <p
+                className={cn(
+                  "truncate text-xs text-slate-400",
+                  compact && "text-[10px]",
+                  mirrored && "flex justify-end"
+                )}
+              >
+                {rankEmblemUrl ? (
+                  <RankBadge
+                    url={rankEmblemUrl}
+                    label={rankLabel}
+                    compact={compact}
+                    className={!mirrored ? "flex-row-reverse" : undefined}
+                  />
+                ) : (
+                  rankLabel
+                )}
+              </p>
+              {rolePrioritiesLine && (
+                <p className="mt-1 truncate text-xs text-indigo-300">
+                  {rolePrioritiesLine}
+                </p>
               )}
-            </p>
-            <p
+            </div>
+            <div className="flex shrink-0 gap-1">
+              {isPresent && (
+                <Circle
+                  className={cn(
+                    "h-3.5 w-3.5 fill-emerald-400 text-emerald-400",
+                    compact && "h-3 w-3"
+                  )}
+                  aria-label="Obecny w pokoju lobby"
+                />
+              )}
+              {voted && <ArrowLeftRight className="h-4 w-4 text-emerald-400" />}
+              {isSelector && <Sparkles className="h-4 w-4 text-amber-400" />}
+            </div>
+          </div>
+          {!compact ? (
+            <div
               className={cn(
-                "truncate text-xs text-slate-400",
-                compact && "text-[10px]",
-                mirrored && "flex justify-end"
+                "mt-auto flex gap-1 pt-3",
+                mirrored ? "flex-row-reverse justify-start" : "justify-start"
               )}
             >
-              {rankEmblemUrl ? (
-                <RankBadge
-                  url={rankEmblemUrl}
-                  label={rankLabel}
-                  compact={compact}
-                  className={!mirrored ? "flex-row-reverse" : undefined}
-                />
-              ) : (
-                rankLabel
+              {Array.from({ length: 10 }).map((_, i) => {
+                const result = matchHistory[i];
+                return (
+                  <span
+                    key={i}
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded text-xs font-bold",
+                      result === "W" && "bg-emerald-600/30 text-emerald-300",
+                      result === "L" && "bg-red-600/30 text-red-300",
+                      !result && "bg-slate-700/50 text-slate-600"
+                    )}
+                  >
+                    {result ?? "-"}
+                  </span>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "mt-auto flex gap-0.5 pt-1",
+                mirrored ? "flex-row-reverse justify-start" : "justify-start"
               )}
-            </p>
-            {rolePrioritiesLine && (
-              <p className="mt-1 truncate text-xs text-indigo-300">{rolePrioritiesLine}</p>
-            )}
-          </div>
-          <div className="flex shrink-0 gap-1">
-            {isPresent && (
-              <Circle
-                className={cn(
-                  "h-3.5 w-3.5 fill-emerald-400 text-emerald-400",
-                  compact && "h-3 w-3"
-                )}
-                aria-label="Obecny w pokoju lobby"
-              />
-            )}
-            {voted && <ArrowLeftRight className="h-4 w-4 text-emerald-400" />}
-            {isSelector && <Sparkles className="h-4 w-4 text-amber-400" />}
-          </div>
+            >
+              {Array.from({ length: 10 }).map((_, i) => {
+                const result = matchHistory[i];
+                return (
+                  <span
+                    key={i}
+                    className={cn(
+                      "h-2.5 w-2.5 rounded-[2px]",
+                      result === "W" && "bg-emerald-600",
+                      result === "L" && "bg-red-600",
+                      !result && "bg-slate-700/70"
+                    )}
+                    title={
+                      result === "W"
+                        ? "Wygrana"
+                        : result === "L"
+                          ? "Przegrana"
+                          : "Brak"
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
-        {!compact ? (
-          <div
-            className={cn(
-              "mt-auto flex gap-1 pt-3",
-              mirrored ? "flex-row-reverse justify-start" : "justify-start"
-            )}
-          >
-            {Array.from({ length: 10 }).map((_, i) => {
-              const result = matchHistory[i];
-              return (
-                <span
-                  key={i}
-                  className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded text-xs font-bold",
-                    result === "W" && "bg-emerald-600/30 text-emerald-300",
-                    result === "L" && "bg-red-600/30 text-red-300",
-                    !result && "bg-slate-700/50 text-slate-600"
-                  )}
-                >
-                  {result ?? "-"}
-                </span>
-              );
-            })}
-          </div>
-        ) : (
-          <div
-            className={cn(
-              "mt-auto flex gap-0.5 pt-1",
-              mirrored ? "flex-row-reverse justify-start" : "justify-start"
-            )}
-          >
-            {Array.from({ length: 10 }).map((_, i) => {
-              const result = matchHistory[i];
-              return (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-2.5 w-2.5 rounded-[2px]",
-                    result === "W" && "bg-emerald-600",
-                    result === "L" && "bg-red-600",
-                    !result && "bg-slate-700/70"
-                  )}
-                  title={result === "W" ? "Wygrana" : result === "L" ? "Przegrana" : "Brak"}
-                />
-              );
-            })}
-          </div>
-        )}
       </div>
       <div
         className={cn(
