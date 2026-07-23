@@ -57,22 +57,29 @@ import {
   LobbyPlayer,
   LobbyStatus,
   LoLRank,
+  LoLRole,
   MatchResult,
   PlayerAssignment,
   SelectedWeakness,
   TeamProposal,
   UserProfile,
+  VoteState,
   Weakness,
   WeaknessCell,
 } from "@/types";
 import { normalizeBalanceMode } from "@/lib/constants/balance-modes";
 
 const LOBBY_SIZE = 10;
-const PRE_REVEAL_SECONDS = 10;
+const PRE_REVEAL_SECONDS = 5;
+const ADMIN_REDRAW_PRE_REVEAL_SECONDS = 3;
 const PRE_REVEAL_ROLE_INDEX = -1;
 const REVEAL_SECONDS = 5;
 const CONFIRM_SECONDS = 20;
 const VOTE_LOCK_SECONDS = 10;
+
+function featuredOptions(lobby: Lobby) {
+  return { featuredMatchup: lobby.featuredMatchup ?? null };
+}
 
 function emptySlots(): (string | null)[] {
   return Array.from({ length: LOBBY_SIZE }, () => null);
@@ -90,7 +97,7 @@ function defaultWeaknessesState() {
   };
 }
 
-function defaultVotes() {
+function defaultVotes(): VoteState {
   return {
     lineup: {},
     proposals: {},
@@ -118,17 +125,11 @@ function confirmPhaseUpdates(): Record<string, unknown> {
   };
 }
 
-function preRevealPhaseUpdates(): Record<string, unknown> {
+function preRevealPhaseUpdates(seconds = PRE_REVEAL_SECONDS): Record<string, unknown> {
   return {
     revealRoleIndex: PRE_REVEAL_ROLE_INDEX,
-    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + PRE_REVEAL_SECONDS * 1000),
+    phaseTimerEndsAt: Timestamp.fromMillis(Date.now() + seconds * 1000),
   };
-}
-
-function shouldStartConfirmPhase(lobby: Lobby, presentUids?: Record<string, boolean>) {
-  if (lobby.status !== "open") return false;
-  const nextLobby = presentUids ? { ...lobby, presentUids } : lobby;
-  return allPlayersInLobbyRoom(nextLobby);
 }
 
 async function refreshTeamAssignments(
@@ -180,6 +181,7 @@ export async function createLobby(
     cooldownEndsAt: null,
     phaseTimerEndsAt: null,
     revealRoleIndex: 0,
+    featuredMatchup: null,
     updatedAt: serverTimestamp(),
   });
   return ref.id;
@@ -192,7 +194,9 @@ export async function joinLobby(lobbyId: string, uid: string) {
     if (!snap.exists()) throw new Error("Lobby nie istnieje");
 
     const lobby = snap.data() as Lobby;
-    if (lobby.status !== "open") throw new Error("Lobby nie przyjmuje zapisów");
+    if (lobby.status !== "open" && lobby.status !== "post_game") {
+      throw new Error("Lobby nie przyjmuje zapisów");
+    }
     if (lobby.slots.includes(uid)) throw new Error("Już jesteś zapisany");
 
     const slots = [...lobby.slots];
@@ -218,45 +222,10 @@ export async function enterLobbyRoom(lobbyId: string, uid: string) {
     if (!lobby.slots.includes(uid)) return;
     if (lobby.status !== "open") return;
 
-    const alreadyPresent = !!lobby.presentUids?.[uid];
-    const presentUids = alreadyPresent
-      ? { ...(lobby.presentUids ?? {}) }
-      : { ...(lobby.presentUids ?? {}), [uid]: true };
-    const nextLobby = { ...lobby, presentUids };
-
-    if (alreadyPresent) {
-      if (!shouldStartConfirmPhase(nextLobby)) return;
-      tx.update(lobbyRef, {
-        ...confirmPhaseUpdates(),
-        updatedAt: serverTimestamp(),
-      });
-      return;
-    }
-
-    const updates: Record<string, unknown> = {
-      presentUids,
-      updatedAt: serverTimestamp(),
-    };
-
-    if (shouldStartConfirmPhase(nextLobby)) {
-      Object.assign(updates, confirmPhaseUpdates());
-    }
-
-    tx.update(lobbyRef, updates);
-  });
-}
-
-export async function tryStartConfirmPhase(lobbyId: string) {
-  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
-  await runTransaction(getFirebaseDb(), async (tx) => {
-    const snap = await tx.get(lobbyRef);
-    if (!snap.exists()) return;
-
-    const lobby = snap.data() as Lobby;
-    if (!shouldStartConfirmPhase(lobby)) return;
+    if (lobby.presentUids?.[uid]) return;
 
     tx.update(lobbyRef, {
-      ...confirmPhaseUpdates(),
+      presentUids: { ...(lobby.presentUids ?? {}), [uid]: true },
       updatedAt: serverTimestamp(),
     });
   });
@@ -302,8 +271,8 @@ export async function fillLobbyWithTestBots(lobbyId: string) {
   if (!lobbySnap.exists()) throw new Error("Lobby nie istnieje");
 
   const lobby = lobbySnap.data() as Lobby;
-  if (lobby.status !== "open") {
-    throw new Error("Można wypełnić botami tylko otwarte lobby");
+  if (lobby.status !== "open" && lobby.status !== "post_game") {
+    throw new Error("Można wypełnić botami tylko w otwartym lobby lub między rundami");
   }
 
   const emptySlots = lobby.slots.filter((slot) => slot === null).length;
@@ -326,8 +295,8 @@ export async function fillLobbyWithTestBots(lobbyId: string) {
     if (!snap.exists()) throw new Error("Lobby nie istnieje");
 
     const current = snap.data() as Lobby;
-    if (current.status !== "open") {
-      throw new Error("Można wypełnić botami tylko otwarte lobby");
+    if (current.status !== "open" && current.status !== "post_game") {
+      throw new Error("Można wypełnić botami tylko w otwartym lobby lub między rundami");
     }
 
     const slots = [...current.slots];
@@ -368,13 +337,27 @@ export async function fillLobbyWithTestBots(lobbyId: string) {
       updatedAt: serverTimestamp(),
     };
 
-    const nextLobby = { ...current, slots };
-    if (shouldStartConfirmPhase(nextLobby)) {
-      Object.assign(updates, confirmPhaseUpdates());
-    }
-
     tx.update(lobbyRef, updates);
   });
+}
+
+function stripUidFromVotes(votes: VoteState | undefined, uid: string): VoteState {
+  const next = votes ?? defaultVotes();
+  const lineup = { ...next.lineup };
+  const proposals = { ...next.proposals };
+  delete lineup[uid];
+  delete proposals[uid];
+  return { ...next, lineup, proposals };
+}
+
+function removeUidFromLobbyFields(lobby: Lobby, uid: string) {
+  const slots = lobby.slots.map((s) => (s === uid ? null : s));
+  const acceptances = { ...lobby.acceptances };
+  delete acceptances[uid];
+  const presentUids = { ...(lobby.presentUids ?? {}) };
+  delete presentUids[uid];
+  const votes = stripUidFromVotes(lobby.votes, uid);
+  return { slots, acceptances, presentUids, votes };
 }
 
 export async function leaveLobby(lobbyId: string, uid: string) {
@@ -384,25 +367,85 @@ export async function leaveLobby(lobbyId: string, uid: string) {
     if (!snap.exists()) return;
 
     const lobby = snap.data() as Lobby;
-    if (lobby.status !== "open" && lobby.status !== "confirming") {
+    if (
+      lobby.status !== "open" &&
+      lobby.status !== "confirming" &&
+      lobby.status !== "post_game"
+    ) {
       throw new Error("Nie można opuścić lobby w tej fazie");
     }
 
-    const slots = lobby.slots.map((s) => (s === uid ? null : s));
-    const acceptances = { ...lobby.acceptances };
-    delete acceptances[uid];
-    const presentUids = { ...(lobby.presentUids ?? {}) };
-    delete presentUids[uid];
+    if (!lobby.slots.includes(uid)) return;
 
-    tx.update(lobbyRef, {
+    const { slots, acceptances, presentUids, votes } = removeUidFromLobbyFields(
+      lobby,
+      uid
+    );
+
+    const updates: Record<string, unknown> = {
       slots,
       acceptances,
       presentUids,
-      status: "open",
-      acceptDeadline: null,
-      phaseTimerEndsAt: null,
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    if (lobby.status === "open" || lobby.status === "confirming") {
+      updates.status = "open";
+      updates.acceptDeadline = null;
+      updates.phaseTimerEndsAt = null;
+    } else {
+      updates.votes = votes;
+    }
+
+    tx.update(lobbyRef, updates);
+  });
+}
+
+/** Admin: wyrzuca gracza ze slotu (open / confirming / między rundami). */
+export async function adminKickFromLobby(lobbyId: string, uid: string) {
+  if (!uid) throw new Error("Brak użytkownika");
+
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  await runTransaction(getFirebaseDb(), async (tx) => {
+    const snap = await tx.get(lobbyRef);
+    if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+    const lobby = snap.data() as Lobby;
+    if (
+      lobby.status !== "open" &&
+      lobby.status !== "confirming" &&
+      lobby.status !== "post_game"
+    ) {
+      throw new Error(
+        "Można wyrzucić gracza tylko przed startem lub między rundami"
+      );
+    }
+
+    if (!lobby.slots.includes(uid)) {
+      throw new Error("Gracz nie jest w tym lobby");
+    }
+
+    const { slots, acceptances, presentUids, votes } = removeUidFromLobbyFields(
+      lobby,
+      uid
+    );
+
+    const updates: Record<string, unknown> = {
+      slots,
+      acceptances,
+      presentUids,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (lobby.status === "open" || lobby.status === "confirming") {
+      updates.status = "open";
+      updates.acceptDeadline = null;
+      updates.phaseTimerEndsAt = null;
+    } else {
+      updates.votes = votes;
+    }
+
+    tx.update(lobbyRef, updates);
   });
 }
 
@@ -497,6 +540,68 @@ export async function restartConfirmTimer(lobbyId: string) {
   });
 }
 
+/** Admin: startuje timer akceptacji dopiero gdy wszyscy są w pokoju. */
+export async function adminStartConfirmPhase(lobbyId: string) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+  if (lobby.status !== "open") {
+    throw new Error("Timer akceptacji można uruchomić tylko w otwartym lobby");
+  }
+  if (!allPlayersInLobbyRoom(lobby)) {
+    throw new Error(
+      "Wszyscy gracze muszą dołączyć i wejść do lobby, zanim uruchomisz timer"
+    );
+  }
+
+  await updateDoc(lobbyRef, {
+    ...confirmPhaseUpdates(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function setFeaturedMatchup(
+  lobbyId: string,
+  matchup: { role: LoLRole; uidA: string; uidB: string } | null
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+  if (lobby.status !== "open" && lobby.status !== "overview" && lobby.status !== "post_game") {
+    throw new Error(
+      "Featured matchup można ustawić przed startem, w overview lub między rundami"
+    );
+  }
+
+  if (!matchup) {
+    await updateDoc(lobbyRef, {
+      featuredMatchup: null,
+      updatedAt: serverTimestamp(),
+    });
+    return;
+  }
+
+  if (matchup.uidA === matchup.uidB) {
+    throw new Error("Wybierz dwóch różnych graczy");
+  }
+  if (!lobby.slots.includes(matchup.uidA) || !lobby.slots.includes(matchup.uidB)) {
+    throw new Error("Obaj gracze muszą być w lobby");
+  }
+
+  await updateDoc(lobbyRef, {
+    featuredMatchup: {
+      role: matchup.role,
+      uidA: matchup.uidA,
+      uidB: matchup.uidB,
+    },
+    updatedAt: serverTimestamp(),
+  });
+}
+
 async function fetchLobbyPlayers(uids: string[]): Promise<LobbyPlayer[]> {
   const players: LobbyPlayer[] = [];
   for (const uid of uids) {
@@ -527,7 +632,11 @@ export async function draftTeams(lobbyId: string) {
   const lobby = lobbySnap.data() as Lobby;
   const uids = lobby.slots.filter(Boolean) as string[];
   const players = await fetchLobbyPlayers(uids);
-  const proposal = buildFullProposal(players, lobby.balanceMode);
+  const proposal = buildFullProposal(
+    players,
+    lobby.balanceMode,
+    featuredOptions(lobby)
+  );
 
   await updateDoc(lobbyRef, {
     team1: toFirestoreTeam(proposal.team1),
@@ -669,6 +778,7 @@ export async function resolveLineupVote(lobbyId: string) {
       lobby.balanceMode,
       {
         exclude: [{ team1: lobby.team1, team2: lobby.team2 }],
+        featuredMatchup: lobby.featuredMatchup ?? null,
       }
     );
 
@@ -1207,10 +1317,18 @@ export async function startNextRound(lobbyId: string) {
     team2: lobby.team2,
   };
 
-  let proposal = buildFullProposal(players, lobby.balanceMode);
+  let proposal = buildFullProposal(
+    players,
+    lobby.balanceMode,
+    featuredOptions(lobby)
+  );
   for (let attempt = 0; attempt < 50; attempt++) {
     if (!proposalsAreEqual(proposal, previous)) break;
-    proposal = buildFullProposal(players, lobby.balanceMode);
+    proposal = buildFullProposal(
+      players,
+      lobby.balanceMode,
+      featuredOptions(lobby)
+    );
   }
 
   await updateDoc(lobbyRef, {
@@ -1224,6 +1342,54 @@ export async function startNextRound(lobbyId: string) {
     weaknesses: defaultWeaknessesState(),
     winnerTeam: null,
     reshuffleBonusGranted: false,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Admin: przelosowuje składy z overview i odpala reveal od nowa.
+ * Opcjonalnie zmienia tryb losowania na kolejne rundy / reshuffle.
+ */
+export async function adminRedrawOverviewTeams(
+  lobbyId: string,
+  balanceMode?: BalanceMode
+) {
+  const lobbyRef = doc(getFirebaseDb(), "lobbies", lobbyId);
+  const snap = await getDoc(lobbyRef);
+  if (!snap.exists()) throw new Error("Lobby nie istnieje");
+
+  const lobby = snap.data() as Lobby;
+  if (lobby.status !== "overview") {
+    throw new Error("Przelosowanie dostępne tylko w przeglądzie składu");
+  }
+
+  const uids = lobby.slots.filter(Boolean) as string[];
+  if (uids.length !== LOBBY_SIZE) {
+    throw new Error("Lobby musi mieć 10 graczy");
+  }
+
+  const mode = normalizeBalanceMode(balanceMode ?? lobby.balanceMode);
+  const players = await fetchLobbyPlayers(uids);
+  const previous: TeamProposal = {
+    team1: lobby.team1,
+    team2: lobby.team2,
+  };
+
+  let proposal = buildFullProposal(players, mode, featuredOptions(lobby));
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if (!proposalsAreEqual(proposal, previous)) break;
+    proposal = buildFullProposal(players, mode, featuredOptions(lobby));
+  }
+
+  await updateDoc(lobbyRef, {
+    status: "reveal",
+    balanceMode: mode,
+    team1: toFirestoreTeam(proposal.team1),
+    team2: toFirestoreTeam(proposal.team2),
+    ...preRevealPhaseUpdates(ADMIN_REDRAW_PRE_REVEAL_SECONDS),
+    votes: defaultVotes(),
+    proposalA: null,
+    proposalB: null,
     updatedAt: serverTimestamp(),
   });
 }
@@ -1271,7 +1437,11 @@ export async function adminDeleteUserProfile(targetUid: string) {
 
   for (const lobbyDoc of lobbiesSnap.docs) {
     const lobby = lobbyDoc.data() as Lobby;
-    if (lobby.status !== "open" && lobby.status !== "confirming") {
+    if (
+      lobby.status !== "open" &&
+      lobby.status !== "confirming" &&
+      lobby.status !== "post_game"
+    ) {
       throw new Error(
         "Nie można usunąć profilu — użytkownik uczestniczy w aktywnym lobby. Zakończ sesję lub poczekaj na koniec gry."
       );
@@ -1279,7 +1449,12 @@ export async function adminDeleteUserProfile(targetUid: string) {
   }
 
   for (const lobbyDoc of lobbiesSnap.docs) {
-    await leaveLobby(lobbyDoc.id, targetUid);
+    const lobby = lobbyDoc.data() as Lobby;
+    if (lobby.status === "post_game") {
+      await adminKickFromLobby(lobbyDoc.id, targetUid);
+    } else {
+      await leaveLobby(lobbyDoc.id, targetUid);
+    }
   }
 
   const botUid = botUidForUser(targetUid);
@@ -1382,6 +1557,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
             lobby.team1.length && lobby.team2.length
               ? [{ team1: lobby.team1, team2: lobby.team2 }]
               : [],
+          featuredMatchup: lobby.featuredMatchup ?? null,
         }
       );
       updates.proposalA = toFirestoreProposal(proposalA);
@@ -1407,6 +1583,7 @@ export async function adminSetLobbyPhase(lobbyId: string, phase: LobbyStatus) {
             lobby.team1.length && lobby.team2.length
               ? [{ team1: lobby.team1, team2: lobby.team2 }]
               : [],
+          featuredMatchup: lobby.featuredMatchup ?? null,
         });
         proposalA = proposals.proposalA;
         proposalB = proposals.proposalB;

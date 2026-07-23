@@ -74,6 +74,7 @@ export function normalizeLobby(data: Lobby): Lobby {
   return {
     ...data,
     balanceMode: normalizeBalanceMode(data.balanceMode),
+    featuredMatchup: data.featuredMatchup ?? null,
     presentUids: data.presentUids ?? {},
     roundHistory: (data.roundHistory ?? []).map((round) => ({
       ...round,

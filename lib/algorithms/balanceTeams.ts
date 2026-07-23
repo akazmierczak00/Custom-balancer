@@ -1,5 +1,6 @@
 import {
   BalanceMode,
+  FeaturedMatchup,
   LobbyPlayer,
   PlayerAssignment,
   TeamProposal,
@@ -10,6 +11,25 @@ import { formatRolePriorities } from "@/lib/constants/roles";
 import { normalizeBalanceMode } from "@/lib/constants/balance-modes";
 
 const ALL_ROLES: LoLRole[] = ["top", "jungle", "mid", "adc", "support"];
+
+export type BuildProposalOptions = {
+  featuredMatchup?: FeaturedMatchup | null;
+};
+
+function normalizeFeaturedMatchup(
+  players: LobbyPlayer[],
+  matchup: FeaturedMatchup | null | undefined
+): FeaturedMatchup | null {
+  if (!matchup) return null;
+  if (!ALL_ROLES.includes(matchup.role)) return null;
+  if (!matchup.uidA || !matchup.uidB || matchup.uidA === matchup.uidB) {
+    return null;
+  }
+  const a = players.find((p) => p.uid === matchup.uidA);
+  const b = players.find((p) => p.uid === matchup.uidB);
+  if (!a || !b) return null;
+  return matchup;
+}
 
 function playerPoints(player: LobbyPlayer): number {
   return getRankPoints(player.rank, player.rankDivision, player.rankLp);
@@ -63,7 +83,8 @@ function teamPointsSum(team: LobbyPlayer[]): number {
 export function generateBalancedTeams(
   players: LobbyPlayer[],
   maxDeviation = 4,
-  attempts = 200
+  attempts = 200,
+  featured: FeaturedMatchup | null = null
 ): { team1: LobbyPlayer[]; team2: LobbyPlayer[] } {
   if (players.length !== 10) {
     throw new Error("Wymagane jest dokładnie 10 graczy");
@@ -75,10 +96,35 @@ export function generateBalancedTeams(
   const candidates: { team1: LobbyPlayer[]; team2: LobbyPlayer[]; score: number }[] =
     [];
 
+  const playerA = featured
+    ? players.find((p) => p.uid === featured.uidA)
+    : undefined;
+  const playerB = featured
+    ? players.find((p) => p.uid === featured.uidB)
+    : undefined;
+  const rest = featured
+    ? players.filter(
+        (p) => p.uid !== featured.uidA && p.uid !== featured.uidB
+      )
+    : null;
+
   for (let i = 0; i < attempts; i++) {
-    const shuffled = shuffle(players);
-    const team1 = shuffled.slice(0, 5);
-    const team2 = shuffled.slice(5, 10);
+    let team1: LobbyPlayer[];
+    let team2: LobbyPlayer[];
+
+    if (featured && playerA && playerB && rest && rest.length === 8) {
+      const shuffledRest = shuffle(rest);
+      const flip = Math.random() < 0.5;
+      const sideA = flip ? playerA : playerB;
+      const sideB = flip ? playerB : playerA;
+      team1 = [sideA, ...shuffledRest.slice(0, 4)];
+      team2 = [sideB, ...shuffledRest.slice(4, 8)];
+    } else {
+      const shuffled = shuffle(players);
+      team1 = shuffled.slice(0, 5);
+      team2 = shuffled.slice(5, 10);
+    }
+
     const team1Sum = team1.reduce((acc, p) => acc + playerPoints(p), 0);
     const team2Sum = team2.reduce((acc, p) => acc + playerPoints(p), 0);
 
@@ -94,6 +140,13 @@ export function generateBalancedTeams(
   }
 
   if (candidates.length === 0) {
+    if (featured && playerA && playerB && rest && rest.length === 8) {
+      const shuffledRest = shuffle(rest);
+      return {
+        team1: [playerA, ...shuffledRest.slice(0, 4)],
+        team2: [playerB, ...shuffledRest.slice(4, 8)],
+      };
+    }
     const shuffled = shuffle(players);
     return { team1: shuffled.slice(0, 5), team2: shuffled.slice(5, 10) };
   }
@@ -138,14 +191,29 @@ function toAssignment(player: LobbyPlayer, role: LoLRole): PlayerAssignment {
 /** Klasyczne przypisanie ról: od najniższej rangi, pierwsza wolna rola z priorytetu. */
 export function assignRoles(
   team1: LobbyPlayer[],
-  team2: LobbyPlayer[]
+  team2: LobbyPlayer[],
+  featured: FeaturedMatchup | null = null
 ): TeamProposal {
-  const assignTeam = (team: LobbyPlayer[]): PlayerAssignment[] => {
-    const sorted = [...team].sort((a, b) => playerPoints(a) - playerPoints(b));
+  const assignTeam = (
+    team: LobbyPlayer[],
+    lockedUid: string | null
+  ): PlayerAssignment[] => {
     const taken = new Set<LoLRole>();
     const assignments: PlayerAssignment[] = [];
+    const remaining = [...team];
 
-    for (const player of sorted) {
+    if (featured && lockedUid) {
+      const lockedPlayer = remaining.find((p) => p.uid === lockedUid);
+      if (lockedPlayer) {
+        assignments.push(toAssignment(lockedPlayer, featured.role));
+        taken.add(featured.role);
+        const idx = remaining.findIndex((p) => p.uid === lockedUid);
+        if (idx >= 0) remaining.splice(idx, 1);
+      }
+    }
+
+    remaining.sort((a, b) => playerPoints(a) - playerPoints(b));
+    for (const player of remaining) {
       const role = pickRoleForPlayer(player, taken);
       taken.add(role);
       assignments.push(toAssignment(player, role));
@@ -154,9 +222,18 @@ export function assignRoles(
     return assignments;
   };
 
+  const lock1 =
+    featured && team1.some((p) => p.uid === featured.uidA || p.uid === featured.uidB)
+      ? team1.find((p) => p.uid === featured.uidA || p.uid === featured.uidB)!.uid
+      : null;
+  const lock2 =
+    featured && team2.some((p) => p.uid === featured.uidA || p.uid === featured.uidB)
+      ? team2.find((p) => p.uid === featured.uidA || p.uid === featured.uidB)!.uid
+      : null;
+
   return {
-    team1: assignTeam(team1),
-    team2: assignTeam(team2),
+    team1: assignTeam(team1, lock1),
+    team2: assignTeam(team2, lock2),
   };
 }
 
@@ -175,11 +252,20 @@ function permuteRoles(roles: LoLRole[]): LoLRole[][] {
 const ROLE_PERMUTATIONS = permuteRoles(ALL_ROLES);
 
 /** Optymalne role (max sumy preferencji) — do trybów score/roles/fair_lanes. */
-function assignRolesOptimal(team: LobbyPlayer[]): PlayerAssignment[] {
+function assignRolesOptimal(
+  team: LobbyPlayer[],
+  locked?: { uid: string; role: LoLRole } | null
+): PlayerAssignment[] {
   let bestScore = -Infinity;
   let bestRoles: LoLRole[] = ALL_ROLES;
+  const lockedIndex = locked
+    ? team.findIndex((p) => p.uid === locked.uid)
+    : -1;
 
   for (const roles of ROLE_PERMUTATIONS) {
+    if (lockedIndex >= 0 && locked && roles[lockedIndex] !== locked.role) {
+      continue;
+    }
     let score = 0;
     for (let i = 0; i < team.length; i++) {
       score += rolePreferenceScore(team[i]!, roles[i]!);
@@ -190,7 +276,47 @@ function assignRolesOptimal(team: LobbyPlayer[]): PlayerAssignment[] {
     }
   }
 
+  if (bestScore === -Infinity && locked && lockedIndex >= 0) {
+    // Fallback: zablokuj rolę ręcznie, resztę optymalizuj.
+    const freeRoles = ALL_ROLES.filter((r) => r !== locked.role);
+    const freePlayers = team.filter((_, i) => i !== lockedIndex);
+    const freeAssign = assignRolesOptimal(freePlayers);
+    const byUid = new Map(freeAssign.map((a) => [a.uid, a.role]));
+    return team.map((player) =>
+      toAssignment(
+        player,
+        player.uid === locked.uid
+          ? locked.role
+          : (byUid.get(player.uid) ?? freeRoles[0]!)
+      )
+    );
+  }
+
   return team.map((player, index) => toAssignment(player, bestRoles[index]!));
+}
+
+function lockForTeam(
+  team: LobbyPlayer[],
+  featured: FeaturedMatchup | null
+): { uid: string; role: LoLRole } | null {
+  if (!featured) return null;
+  const player = team.find(
+    (p) => p.uid === featured.uidA || p.uid === featured.uidB
+  );
+  if (!player) return null;
+  return { uid: player.uid, role: featured.role };
+}
+
+function oppositeSides(
+  team1: LobbyPlayer[],
+  team2: LobbyPlayer[],
+  featured: FeaturedMatchup
+): boolean {
+  const aIn1 = team1.some((p) => p.uid === featured.uidA);
+  const bIn1 = team1.some((p) => p.uid === featured.uidB);
+  const aIn2 = team2.some((p) => p.uid === featured.uidA);
+  const bIn2 = team2.some((p) => p.uid === featured.uidB);
+  return (aIn1 && bIn2) || (bIn1 && aIn2);
 }
 
 function enumeratePartitions(
@@ -326,42 +452,49 @@ function pickFromTop(candidates: ScoredCandidate[], topN: number): TeamProposal 
 
 function buildScoredProposal(
   players: LobbyPlayer[],
-  mode: BalanceMode
+  mode: BalanceMode,
+  featured: FeaturedMatchup | null = null
 ): TeamProposal {
-  const partitions = enumeratePartitions(players);
+  const partitions = enumeratePartitions(players).filter((part) =>
+    featured ? oppositeSides(part.team1, part.team2, featured) : true
+  );
   const candidates: ScoredCandidate[] = [];
 
   const avg =
     players.reduce((acc, p) => acc + playerPoints(p), 0) / 2;
   const maxRankDiff = mode === "chaos" ? 12 : mode === "roles" ? 8 : 6;
 
-  for (const { team1, team2 } of partitions) {
-    const rankDiff = Math.abs(teamPointsSum(team1) - teamPointsSum(team2));
-    if (rankDiff > maxRankDiff) continue;
-
+  const scorePartition = (
+    team1: LobbyPlayer[],
+    team2: LobbyPlayer[],
+    extraCost = 0
+  ) => {
     const proposal = {
-      team1: assignRolesOptimal(team1),
-      team2: assignRolesOptimal(team2),
+      team1: assignRolesOptimal(team1, lockForTeam(team1, featured)),
+      team2: assignRolesOptimal(team2, lockForTeam(team2, featured)),
     };
     candidates.push({
       proposal,
-      cost: scoreCandidate(mode, team1, team2, proposal, players),
+      cost:
+        scoreCandidate(mode, team1, team2, proposal, players) + extraCost,
     });
+  };
+
+  for (const { team1, team2 } of partitions) {
+    const rankDiff = Math.abs(teamPointsSum(team1) - teamPointsSum(team2));
+    if (rankDiff > maxRankDiff) continue;
+    scorePartition(team1, team2);
   }
 
   if (candidates.length === 0) {
-    // Fallback: wszystkie partycje bez limitu rankDiff
     for (const { team1, team2 } of partitions) {
-      const proposal = {
-        team1: assignRolesOptimal(team1),
-        team2: assignRolesOptimal(team2),
-      };
-      candidates.push({
-        proposal,
-        cost: scoreCandidate(mode, team1, team2, proposal, players) +
-          Math.abs(teamPointsSum(team1) - avg),
-      });
+      scorePartition(team1, team2, Math.abs(teamPointsSum(team1) - avg));
     }
+  }
+
+  if (candidates.length === 0 && featured) {
+    const { team1, team2 } = generateBalancedTeams(players, 4, 200, featured);
+    return assignRoles(team1, team2, featured);
   }
 
   const topN = mode === "chaos" ? 25 : mode === "roles" ? 8 : 10;
@@ -394,30 +527,38 @@ function generateProposalDifferentFrom(
   players: LobbyPlayer[],
   mode: BalanceMode | undefined,
   forbidden: TeamProposal[],
-  maxAttempts: number
+  maxAttempts: number,
+  options?: BuildProposalOptions
 ): TeamProposal {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const proposal = buildFullProposal(players, mode);
+    const proposal = buildFullProposal(players, mode, options);
     if (!isProposalForbidden(proposal, forbidden)) {
       return proposal;
     }
   }
 
-  return buildFullProposal(players, mode);
+  return buildFullProposal(players, mode, options);
 }
 
 export function buildFullProposal(
   players: LobbyPlayer[],
-  mode: BalanceMode | undefined = "classic"
+  mode: BalanceMode | undefined = "classic",
+  options?: BuildProposalOptions
 ): TeamProposal {
   const resolved = normalizeBalanceMode(mode);
+  const featured = normalizeFeaturedMatchup(players, options?.featuredMatchup);
 
   if (resolved === "classic") {
-    const { team1, team2 } = generateBalancedTeams(players);
-    return assignRoles(team1, team2);
+    const { team1, team2 } = generateBalancedTeams(
+      players,
+      4,
+      200,
+      featured
+    );
+    return assignRoles(team1, team2, featured);
   }
 
-  return buildScoredProposal(players, resolved);
+  return buildScoredProposal(players, resolved, featured);
 }
 
 export function generateDistinctProposals(
@@ -427,22 +568,28 @@ export function generateDistinctProposals(
     /** Składy, których A/B nie mogą powtórzyć (np. oryginalne losowanie). */
     exclude?: TeamProposal[];
     maxAttempts?: number;
+    featuredMatchup?: FeaturedMatchup | null;
   }
 ): { proposalA: TeamProposal; proposalB: TeamProposal } {
   const maxAttempts = options?.maxAttempts ?? 80;
   const excluded = options?.exclude ?? [];
+  const buildOptions: BuildProposalOptions = {
+    featuredMatchup: options?.featuredMatchup,
+  };
 
   const proposalA = generateProposalDifferentFrom(
     players,
     mode,
     excluded,
-    maxAttempts
+    maxAttempts,
+    buildOptions
   );
   const proposalB = generateProposalDifferentFrom(
     players,
     mode,
     [...excluded, proposalA],
-    maxAttempts
+    maxAttempts,
+    buildOptions
   );
 
   return { proposalA, proposalB };

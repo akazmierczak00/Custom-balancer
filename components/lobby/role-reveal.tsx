@@ -18,6 +18,7 @@ interface RoleRevealRowProps {
   team1: PlayerAssignment[];
   team2: PlayerAssignment[];
   highlighted?: boolean;
+  featured?: boolean;
   compact?: boolean;
   currentUid?: string;
   showRolePriorities?: boolean;
@@ -28,6 +29,7 @@ function RoleRevealRow({
   team1,
   team2,
   highlighted,
+  featured,
   compact,
   currentUid,
   showRolePriorities = false,
@@ -38,13 +40,32 @@ function RoleRevealRow({
   return (
     <div
       className={cn(
-        "grid min-w-0 items-stretch animate-role-reveal-in",
+        "relative grid min-w-0 items-stretch animate-role-reveal-in",
         compact
           ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
           : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4",
-        highlighted && "rounded-lg ring-2 ring-indigo-400/40"
+        highlighted && !featured && "rounded-lg ring-2 ring-indigo-400/40",
+        featured &&
+          "rounded-xl bg-amber-500/10 ring-2 ring-amber-400/70 shadow-[0_0_24px_-8px_rgba(251,191,36,0.55)]"
       )}
     >
+      {featured && (
+        <div
+          className={cn(
+            "pointer-events-none absolute left-1/2 z-10 -translate-x-1/2",
+            compact ? "-top-2" : "-top-2.5"
+          )}
+        >
+          <span
+            className={cn(
+              "rounded-full border border-amber-400/50 bg-amber-950/90 font-semibold uppercase tracking-wide text-amber-200",
+              compact ? "px-1.5 py-0.5 text-[8px]" : "px-2.5 py-0.5 text-[10px]"
+            )}
+          >
+            Featured Matchup
+          </span>
+        </div>
+      )}
       <div className="min-w-0 overflow-hidden">
         <PlayerBanner
           player={p1}
@@ -53,18 +74,29 @@ function RoleRevealRow({
           mirrored
           compact={compact}
           showRolePriorities={showRolePriorities}
-          className="h-full"
+          className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
         />
       </div>
-      <div className="flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center gap-0.5">
         <span
           className={cn(
-            "text-center font-semibold text-slate-300",
+            "text-center font-semibold",
+            featured ? "text-amber-200" : "text-slate-300",
             compact ? "text-[10px] leading-tight" : "text-sm"
           )}
         >
           {getRoleLabel(role)}
         </span>
+        {featured && (
+          <span
+            className={cn(
+              "font-bold uppercase tracking-wider text-amber-400/90",
+              compact ? "text-[8px]" : "text-[10px]"
+            )}
+          >
+            vs
+          </span>
+        )}
       </div>
       <div className="min-w-0 overflow-hidden">
         <PlayerBanner
@@ -73,11 +105,28 @@ function RoleRevealRow({
           isCurrentUser={p2?.uid === currentUid}
           compact={compact}
           showRolePriorities={showRolePriorities}
-          className="h-full"
+          className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
         />
       </div>
     </div>
   );
+}
+
+function isFeaturedRole(
+  role: LoLRole,
+  team1: PlayerAssignment[],
+  team2: PlayerAssignment[],
+  lobby: Lobby
+): boolean {
+  const matchup = lobby.featuredMatchup;
+  if (!matchup || matchup.role !== role) return false;
+
+  const p1 = team1.find((p) => p.role === role);
+  const p2 = team2.find((p) => p.role === role);
+  if (!p1 || !p2) return false;
+
+  const uids = new Set([p1.uid, p2.uid]);
+  return uids.has(matchup.uidA) && uids.has(matchup.uidB);
 }
 
 interface ProposalRevealColumnProps {
@@ -88,6 +137,7 @@ interface ProposalRevealColumnProps {
   team2: PlayerAssignment[];
   revealedRoles: LoLRole[];
   currentRole: LoLRole;
+  lobby: Lobby;
   compact?: boolean;
   currentUid?: string;
   showRolePriorities?: boolean;
@@ -101,6 +151,7 @@ function ProposalRevealColumn({
   team2,
   revealedRoles,
   currentRole,
+  lobby,
   compact = false,
   currentUid,
   showRolePriorities = false,
@@ -114,7 +165,7 @@ function ProposalRevealColumn({
       )}
     >
       <p className={cn("text-center font-semibold", labelClassName)}>{label}</p>
-      <div className="space-y-2">
+      <div className={cn("space-y-2", compact ? "pt-1" : "pt-2")}>
         {revealedRoles.map((role) => (
           <RoleRevealRow
             key={role}
@@ -122,6 +173,7 @@ function ProposalRevealColumn({
             team1={team1}
             team2={team2}
             highlighted={role === currentRole}
+            featured={isFeaturedRole(role, team1, team2, lobby)}
             compact={compact}
             currentUid={currentUid}
             showRolePriorities={showRolePriorities}
@@ -156,6 +208,7 @@ export function RoleReveal({
           team2={lobby.proposalA.team2}
           revealedRoles={revealedRoles}
           currentRole={currentRole}
+          lobby={lobby}
           compact
           currentUid={currentUid}
           showRolePriorities={showRolePriorities}
@@ -168,6 +221,7 @@ export function RoleReveal({
           team2={lobby.proposalB.team2}
           revealedRoles={revealedRoles}
           currentRole={currentRole}
+          lobby={lobby}
           compact
           currentUid={currentUid}
           showRolePriorities={showRolePriorities}
@@ -186,17 +240,20 @@ export function RoleReveal({
         <span aria-hidden="true" />
         <h3 className="text-xl font-bold text-purple-300">Team 2</h3>
       </div>
-      {revealedRoles.map((role) => (
-        <RoleRevealRow
-          key={role}
-          role={role}
-          team1={team1}
-          team2={team2}
-          highlighted={role === currentRole}
-          currentUid={currentUid}
-          showRolePriorities={showRolePriorities}
-        />
-      ))}
+      <div className="space-y-3 pt-1">
+        {revealedRoles.map((role) => (
+          <RoleRevealRow
+            key={role}
+            role={role}
+            team1={team1}
+            team2={team2}
+            highlighted={role === currentRole}
+            featured={isFeaturedRole(role, team1, team2, lobby)}
+            currentUid={currentUid}
+            showRolePriorities={showRolePriorities}
+          />
+        ))}
+      </div>
     </div>
   );
 }

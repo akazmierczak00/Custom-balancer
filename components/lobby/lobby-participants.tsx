@@ -82,14 +82,16 @@ export function LobbyParticipants({
             W pokoju lobby: {playersInRoom}/10
           </p>
           <p className="mt-1 text-sm text-slate-400">
-            Potwierdzenie udziału wystartuje, gdy wszyscy zapisani gracze wejdą do lobby.
+            Gdy wszyscy wejdą do lobby, admin uruchomi timer akceptacji.
           </p>
         </div>
       )}
 
       {lobby.status === "open" && isLobbyFull && playersInRoom === 10 && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-center">
-          <p className="font-semibold text-emerald-300">Wszyscy w pokoju — uruchamiamy potwierdzenie...</p>
+          <p className="font-semibold text-emerald-300">
+            Wszyscy w pokoju — czekamy na start akceptacji od admina
+          </p>
         </div>
       )}
 

@@ -7,6 +7,7 @@ import {
   Flag,
   GitBranch,
   LayoutGrid,
+  SkipForward,
   Shuffle,
   Sparkles,
   Swords,
@@ -33,6 +34,7 @@ const ADMIN_PHASES: {
   { status: "weakness_pick", label: "Wybór osłabień", icon: Crosshair },
   { status: "final", label: "Finał", icon: Flag },
   { status: "playing", label: "Gra", icon: Swords },
+  { status: "post_game", label: "Po grze (bez wyniku)", icon: SkipForward },
 ];
 
 interface AdminLobbyControlsProps {

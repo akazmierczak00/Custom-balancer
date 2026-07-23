@@ -5,6 +5,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePhaseTimer } from "@/hooks/use-phase-timer";
 import { AdminLobbyControls } from "@/components/lobby/admin-lobby-controls";
+import { AdminRedrawTeamsPanel } from "@/components/lobby/admin-redraw-teams-panel";
+import { FeaturedMatchupPanel } from "@/components/lobby/featured-matchup-panel";
 import { ConfirmPopup } from "@/components/lobby/confirm-popup";
 import { LobbyParticipants } from "@/components/lobby/lobby-participants";
 import { RoleReveal } from "@/components/lobby/role-reveal";
@@ -34,12 +36,12 @@ import {
   enterLobbyRoom,
   exitLobbyRoom,
   countPlayersInLobbyRoom,
-  tryStartConfirmPhase,
   startLineupVoting,
   startWeaknessReveal,
 } from "@/lib/lobby/service";
 import { getWeaknessCellIndex, WEAKNESS_REVEAL_DELAY_MS } from "@/lib/algorithms/drawWeaknesses";
 import { getBalanceModeLabel } from "@/lib/constants/balance-modes";
+import { getRoleLabel } from "@/lib/constants/roles";
 import { Lobby, UserProfile } from "@/types";
 
 interface LobbyRoomProps {
@@ -112,11 +114,6 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
     profile.uid,
     lobby.presentUids,
   ]);
-
-  useEffect(() => {
-    if (lobby.status !== "open" || !isLobbyFull || playersInRoom < 10) return;
-    void tryStartConfirmPhase(lobby.id);
-  }, [lobby.status, lobby.id, isLobbyFull, playersInRoom]);
 
   const runTransition = useCallback(async (fn: () => Promise<void>) => {
     if (transitionLock.current) return;
@@ -339,6 +336,9 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             {lobby.status === "open" ? ` · ${filledSlots}/10` : ""}
             {" · "}
             Losowanie: {getBalanceModeLabel(lobby.balanceMode)}
+            {lobby.featuredMatchup
+              ? ` · Featured: ${getRoleLabel(lobby.featuredMatchup.role)}`
+              : ""}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -384,6 +384,10 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
           showConfirmActions={showConfirmPopup}
           playersInRoom={playersInRoom}
         />
+      )}
+
+      {adminView && lobby.status === "open" && (
+        <FeaturedMatchupPanel lobby={lobby} playersInRoom={playersInRoom} />
       )}
 
       {lobby.status === "drafting" && (
@@ -435,6 +439,10 @@ export function LobbyRoom({ lobby, profile }: LobbyRoomProps) {
             Rozpocznij głosowanie
           </Button>
         </div>
+      )}
+
+      {adminView && lobby.status === "overview" && (
+        <AdminRedrawTeamsPanel lobby={lobby} />
       )}
 
       {(lobby.status === "voting_lineup" || lobby.status === "locked_lineup") && (

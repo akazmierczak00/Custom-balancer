@@ -25,6 +25,9 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
   const isJoined = lobby.slots.includes(currentUser.uid);
   const isAdmin = currentUser.role === "admin";
   const isCompleted = lobby.status === "session_summary";
+  const canJoinLeave =
+    lobby.status === "open" || lobby.status === "post_game";
+  const hasEmptySlot = filled < 10;
   const roundCount = lobby.roundHistory?.length ?? 0;
   const playedDate = isCompleted ? formatLobbyPlayedDate(lobby) : null;
 
@@ -83,11 +86,13 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
           <p className="lobby-tile-card-subtitle text-sm text-slate-400">
             {isCompleted
               ? `Zakończone · ${formatRoundCount(roundCount)}${playedDate ? ` · ${playedDate}` : ""}`
-              : `Status: ${lobby.status} · ${filled}/10 · ${getBalanceModeLabel(lobby.balanceMode)}`}
+              : lobby.status === "post_game" && hasEmptySlot
+                ? `Między rundami · ${filled}/10 · miejsce wolne · ${getBalanceModeLabel(lobby.balanceMode)}`
+                : `Status: ${lobby.status} · ${filled}/10 · ${getBalanceModeLabel(lobby.balanceMode)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!isCompleted && lobby.status === "open" && isAdmin && filled < 10 && (
+          {!isCompleted && canJoinLeave && isAdmin && hasEmptySlot && (
             <Button
               size="sm"
               variant="outline"
@@ -97,9 +102,9 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
               Wypełnij botami (test)
             </Button>
           )}
-          {!isCompleted && lobby.status === "open" && !isJoined && (
+          {!isCompleted && canJoinLeave && !isJoined && hasEmptySlot && (
             <Button size="sm" onClick={handleJoin} disabled={loading}>
-              Zapisz się
+              {lobby.status === "post_game" ? "Dołącz do sesji" : "Zapisz się"}
             </Button>
           )}
           {(isJoined || isCompleted) && (
@@ -107,7 +112,7 @@ export const LobbyTile = memo(function LobbyTile({ lobby, currentUser, users }: 
               <a href={`/lobby/${lobby.id}`}>{isCompleted ? "Podsumowanie" : "Wejdź"}</a>
             </Button>
           )}
-          {!isCompleted && lobby.status === "open" && isJoined && (
+          {!isCompleted && canJoinLeave && isJoined && (
             <Button size="sm" variant="outline" onClick={handleLeave} disabled={loading}>
               Wypisz się
             </Button>

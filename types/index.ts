@@ -110,6 +110,13 @@ export interface TeamProposal {
 export type LineupVoteChoice = "accept" | "reshuffle";
 export type ProposalVoteChoice = "A" | "B";
 
+/** Dwóch graczy zablokowanych na tej samej linii przeciwko sobie. */
+export interface FeaturedMatchup {
+  role: LoLRole;
+  uidA: string;
+  uidB: string;
+}
+
 export interface VoteState {
   lineup: Record<string, LineupVoteChoice>;
   proposals: Record<string, ProposalVoteChoice>;
@@ -178,6 +185,11 @@ export interface Lobby {
   status: LobbyStatus;
   /** Tryb losowania składów — domyślnie classic dla starych lobby. */
   balanceMode?: BalanceMode;
+  /**
+   * Opcjonalny „featured matchup”: dwóch graczy zawsze na tej samej linii
+   * przeciwko sobie, niezależnie od reszty losowania.
+   */
+  featuredMatchup?: FeaturedMatchup | null;
   slots: (string | null)[];
   presentUids?: Record<string, boolean>;
   acceptances: Record<string, boolean>;

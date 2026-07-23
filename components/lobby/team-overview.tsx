@@ -116,16 +116,46 @@ export function TeamOverview({
       {REVEAL_ROLE_ORDER.map((role) => {
         const p1 = resolvePlayer(team1.find((player) => player.role === role));
         const p2 = resolvePlayer(team2.find((player) => player.role === role));
+        const matchup = lobby.featuredMatchup;
+        const featured =
+          !!matchup &&
+          matchup.role === role &&
+          !!p1 &&
+          !!p2 &&
+          new Set([p1.uid, p2.uid]).has(matchup.uidA) &&
+          new Set([p1.uid, p2.uid]).has(matchup.uidB);
+
         return (
           <div
             key={role}
             className={cn(
-              "grid min-w-0 items-stretch",
+              "relative grid min-w-0 items-stretch",
               compact
                 ? "grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] gap-1"
-                : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4"
+                : "grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] gap-4",
+              featured &&
+                "rounded-xl bg-amber-500/10 ring-2 ring-amber-400/70 shadow-[0_0_24px_-8px_rgba(251,191,36,0.55)]"
             )}
           >
+            {featured && (
+              <div
+                className={cn(
+                  "pointer-events-none absolute left-1/2 z-10 -translate-x-1/2",
+                  compact ? "-top-2" : "-top-2.5"
+                )}
+              >
+                <span
+                  className={cn(
+                    "rounded-full border border-amber-400/50 bg-amber-950/90 font-semibold uppercase tracking-wide text-amber-200",
+                    compact
+                      ? "px-1.5 py-0.5 text-[8px]"
+                      : "px-2.5 py-0.5 text-[10px]"
+                  )}
+                >
+                  Featured Matchup
+                </span>
+              </div>
+            )}
             <div className="min-w-0 overflow-hidden">
               <PlayerBanner
                 player={p1}
@@ -135,18 +165,29 @@ export function TeamOverview({
                 mirrored
                 compact={compact}
                 showRolePriorities={showRolePriorities}
-                className="h-full"
+                className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
               />
             </div>
-            <div className="flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center gap-0.5">
               <span
                 className={cn(
-                  "text-center font-semibold text-slate-300",
+                  "text-center font-semibold",
+                  featured ? "text-amber-200" : "text-slate-300",
                   compact ? "text-[10px] leading-tight" : "text-sm"
                 )}
               >
                 {getRoleLabel(role)}
               </span>
+              {featured && (
+                <span
+                  className={cn(
+                    "font-bold uppercase tracking-wider text-amber-400/90",
+                    compact ? "text-[8px]" : "text-[10px]"
+                  )}
+                >
+                  vs
+                </span>
+              )}
             </div>
             <div className="min-w-0 overflow-hidden">
               <PlayerBanner
@@ -156,7 +197,7 @@ export function TeamOverview({
                 isCurrentUser={p2?.uid === currentUid}
                 compact={compact}
                 showRolePriorities={showRolePriorities}
-                className="h-full"
+                className={cn("h-full", featured && "ring-1 ring-amber-400/30")}
               />
             </div>
           </div>
